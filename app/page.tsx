@@ -11,6 +11,7 @@ export default async function Home() {
   const { data } = await sb
     .from('kpi_snapshots')
     .select('period, uploaded_at, file_name, data')
+    .eq('type', 'rm')
     .order('uploaded_at', { ascending: false })
     .limit(1)
     .maybeSingle();

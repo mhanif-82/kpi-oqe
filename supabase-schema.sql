@@ -11,8 +11,15 @@ create table if not exists kpi_snapshots (
 
 alter table kpi_snapshots add column if not exists file_name text;
 
+-- Tipe data: 'rm' (Relationship Manager) atau 'sourcing' (People Search + Central Sourcing Manager).
+-- Tiap tipe punya snapshot terpisah; upload satu tipe hanya mengganti tipe yang sama.
+alter table kpi_snapshots add column if not exists type text not null default 'rm';
+
 create index if not exists kpi_snapshots_uploaded_at_idx
   on kpi_snapshots (uploaded_at desc);
+
+create index if not exists kpi_snapshots_type_idx
+  on kpi_snapshots (type, uploaded_at desc);
 
 alter table kpi_snapshots enable row level security;
 

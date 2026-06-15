@@ -3,25 +3,37 @@ import { redirect } from 'next/navigation';
 import UploadForm from './UploadForm';
 import DisplaySettings from './DisplaySettings';
 
+type Snap = { period: string | null; file_name: string | null; uploaded_at: string; uploaded_by: string | null; data: unknown } | null;
+
+function rmCount(d: unknown) {
+  if (Array.isArray(d)) return d.length;
+  if (d && typeof d === 'object' && Array.isArray((d as { rows?: unknown[] }).rows)) return (d as { rows: unknown[] }).rows.length;
+  return 0;
+}
+function sourcingCount(d: unknown) {
+  if (d && typeof d === 'object') {
+    const o = d as { peopleSearch?: unknown[]; centralSourcing?: unknown[] };
+    return (o.peopleSearch?.length ?? 0) + (o.centralSourcing?.length ?? 0);
+  }
+  return 0;
+}
+
 export default async function AdminPage() {
   const sb = await createClient();
   const { data: { user } } = await sb.auth.getUser();
   if (!user) redirect('/login');
 
-  const { data: current } = await sb
-    .from('kpi_snapshots')
-    .select('period, file_name, uploaded_at, uploaded_by, data')
-    .order('uploaded_at', { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  const rowCount = (() => {
-    if (!current) return 0;
-    const d = current.data;
-    if (Array.isArray(d)) return d.length;
-    if (d && typeof d === 'object' && Array.isArray((d as { rows?: unknown[] }).rows)) return (d as { rows: unknown[] }).rows.length;
-    return 0;
-  })();
+  const latest = async (type: string): Promise<Snap> => {
+    const { data } = await sb
+      .from('kpi_snapshots')
+      .select('period, file_name, uploaded_at, uploaded_by, data')
+      .eq('type', type)
+      .order('uploaded_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    return data as Snap;
+  };
+  const [rm, sourcing] = await Promise.all([latest('rm'), latest('sourcing')]);
 
   return (
     <main className="min-h-screen bg-[#0a0a0a] text-zinc-100"
@@ -30,97 +42,29 @@ export default async function AdminPage() {
         <header className="flex items-start justify-between gap-4 mb-8">
           <div>
             <h1 className="text-2xl md:text-3xl font-bold tracking-tight flex items-center gap-2">
-              <span>🏆</span> RM Performance Dashboard
+              <span>🏆</span> Performance Dashboard Admin
             </h1>
-            <p className="text-xs text-zinc-500 mt-1">Admin · upload &amp; publish data KPI</p>
+            <p className="text-xs text-zinc-500 mt-1">Upload &amp; publish data KPI — RM &amp; Sourcing</p>
           </div>
           <div className="flex items-center gap-2">
             <span className="text-xs text-zinc-500 hidden md:inline">{user.email}</span>
-            <a href="/" className="text-xs bg-zinc-900 border border-zinc-800 hover:border-amber-400/40 px-3 py-1.5 rounded-md">View dashboard ↗</a>
+            <a href="/" className="text-xs bg-zinc-900 border border-zinc-800 hover:border-amber-400/40 px-3 py-1.5 rounded-md">RM ↗</a>
+            <a href="/ps" className="text-xs bg-zinc-900 border border-zinc-800 hover:border-sky-400/40 px-3 py-1.5 rounded-md">Sourcing ↗</a>
             <form action="/api/logout" method="post">
               <button className="text-xs bg-red-500/10 text-red-300 border border-red-500/20 hover:bg-red-500/20 px-3 py-1.5 rounded-md">Sign out</button>
             </form>
           </div>
         </header>
 
-        {current && (
-          <section className="mb-6 bg-zinc-900/60 border border-zinc-800 rounded-2xl p-4 flex items-center gap-4 flex-wrap">
-            <div className="flex items-center gap-2 text-emerald-400">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="text-xs font-bold tracking-wider">LIVE</span>
-            </div>
-            <div className="text-sm">
-              <span className="font-bold">{rowCount} RM</span>
-              <span className="text-zinc-500"> · {current.period ?? 'Periode tidak terbaca'}</span>
-            </div>
-            <div className="text-xs text-zinc-500">
-              📄 {current.file_name ?? '-'} · diupload {new Date(current.uploaded_at).toLocaleString('id-ID')} oleh {current.uploaded_by ?? '-'}
-            </div>
-          </section>
-        )}
+        {/* Status kedua dashboard */}
+        <section className="mb-6 grid md:grid-cols-2 gap-3">
+          <StatusCard title="🏆 RM" tone="amber" snap={rm} count={rm ? `${rmCount(rm.data)} RM` : null} />
+          <StatusCard title="🔎 Sourcing" tone="sky" snap={sourcing} count={sourcing ? `${sourcingCount(sourcing.data)} orang` : null} />
+        </section>
 
         <section className="mb-6">
           <h2 className="text-sm font-bold tracking-wider text-zinc-400 uppercase mb-3">Upload data baru</h2>
-
-          <details className="mb-4 bg-zinc-900/60 border border-zinc-800 rounded-2xl overflow-hidden group">
-            <summary className="cursor-pointer list-none flex items-center justify-between gap-3 p-4 hover:bg-zinc-900 transition">
-              <span className="flex items-center gap-2 text-sm font-semibold text-zinc-200">
-                📄 Format file Excel — lihat contoh &amp; panduan
-              </span>
-              <span className="text-xs text-zinc-500 group-open:rotate-180 transition">▾</span>
-            </summary>
-            <div className="px-4 pb-4 border-t border-zinc-800/60 pt-4">
-              <a
-                href="/Template_RM_Contoh.xlsx"
-                download
-                className="inline-flex items-center gap-2 bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/25 font-semibold text-sm px-4 py-2.5 rounded-lg transition mb-4"
-              >
-                ⬇ Download template contoh (.xlsx)
-              </a>
-
-              <div className="text-xs text-zinc-400 space-y-3 leading-relaxed">
-                <p>Susunan kolom dari kiri ke kanan:</p>
-                <div className="overflow-x-auto rounded-lg border border-zinc-800">
-                  <table className="text-[11px] w-full">
-                    <thead className="bg-zinc-900 text-zinc-400">
-                      <tr>
-                        <th className="px-2 py-1.5 text-left font-semibold">NO</th>
-                        <th className="px-2 py-1.5 text-left font-semibold">EMPLOYEE NAME</th>
-                        <th className="px-2 py-1.5 text-left font-semibold">AOM</th>
-                        <th className="px-2 py-1.5 text-left font-semibold">REGIONAL</th>
-                        <th className="px-2 py-1.5 text-left font-semibold text-amber-400">Nama KPI</th>
-                        <th className="px-2 py-1.5 text-left font-semibold text-amber-400">BOBOT (xx%)</th>
-                        <th className="px-2 py-1.5 text-left font-semibold">… KPI lain …</th>
-                        <th className="px-2 py-1.5 text-left font-semibold text-emerald-400">PENCAPAIAN</th>
-                      </tr>
-                    </thead>
-                    <tbody className="text-zinc-300">
-                      <tr className="border-t border-zinc-800/60">
-                        <td className="px-2 py-1.5">1</td>
-                        <td className="px-2 py-1.5">Budi Santoso</td>
-                        <td className="px-2 py-1.5">GUNAWAN</td>
-                        <td className="px-2 py-1.5">1. TIMBUL MARULI</td>
-                        <td className="px-2 py-1.5">100.00%</td>
-                        <td className="px-2 py-1.5">10.00%</td>
-                        <td className="px-2 py-1.5 text-zinc-600">…</td>
-                        <td className="px-2 py-1.5 text-emerald-300">100.00%</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-                <ul className="space-y-1.5 list-disc pl-4 text-zinc-500">
-                  <li><b className="text-zinc-300">Baris 1</b> = header, mulai <b className="text-zinc-300">baris 2</b> = data (1 baris = 1 RM).</li>
-                  <li>Tiap <b className="text-amber-400">KPI</b> selalu diikuti kolom <b className="text-amber-400">BOBOT (xx%)</b> di sebelahnya. Jumlah KPI bebas — otomatis terdeteksi.</li>
-                  <li>Kolom terakhir wajib bernama <b className="text-emerald-300">PENCAPAIAN</b> (total skor RM).</li>
-                  <li>Persen boleh ditulis <code className="text-zinc-300">100.00%</code>, <code className="text-zinc-300">95%</code>, atau <code className="text-zinc-300">95,13%</code> — semua terbaca.</li>
-                  <li>Nama duplikat &amp; baris kosong otomatis diabaikan.</li>
-                </ul>
-              </div>
-            </div>
-          </details>
-
-          <UploadForm hasExisting={!!current} />
-          <p className="text-[11px] text-zinc-500 mt-2">⚠ Upload akan <b>menggantikan</b> data sebelumnya (data lama dihapus).</p>
+          <UploadForm hasRm={!!rm} hasSourcing={!!sourcing} />
         </section>
 
         <section className="mb-2">
@@ -129,5 +73,28 @@ export default async function AdminPage() {
         </section>
       </div>
     </main>
+  );
+}
+
+function StatusCard({ title, tone, snap, count }: { title: string; tone: 'amber' | 'sky'; snap: Snap; count: string | null }) {
+  const ring = tone === 'amber' ? 'border-amber-900/50' : 'border-sky-900/50';
+  return (
+    <div className={`bg-zinc-900/60 border ${ring} rounded-2xl p-4`}>
+      <div className="flex items-center gap-2 mb-2">
+        <span className="text-sm font-bold">{title}</span>
+        {snap ? (
+          <span className="flex items-center gap-1.5 text-emerald-400 ml-auto">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="text-[10px] font-bold tracking-wider">LIVE</span>
+          </span>
+        ) : <span className="text-[10px] text-zinc-600 ml-auto">belum ada data</span>}
+      </div>
+      {snap ? (
+        <div className="text-xs text-zinc-400">
+          <div className="text-sm"><span className="font-bold text-zinc-200">{count}</span> · {snap.period ?? 'periode tidak terbaca'}</div>
+          <div className="mt-1 text-zinc-500">📄 {snap.file_name ?? '-'} · {new Date(snap.uploaded_at).toLocaleString('id-ID')}</div>
+        </div>
+      ) : <div className="text-xs text-zinc-600">Upload file untuk menampilkan dashboard.</div>}
+    </div>
   );
 }
