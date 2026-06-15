@@ -11,7 +11,7 @@ const initials = (n: string) => n.split(/\s+/).filter(Boolean).slice(0, 2).map(s
 type KpiDef = { name: string; weight: number };
 type Settings = { transitionMs: number; scrollSpeed: number };
 
-export default function Dashboard({ rows, period, fileName, uploadedAt }: {
+export default function Dashboard({ rows, period, uploadedAt }: {
   rows: KpiRow[]; kpiDefs: KpiDef[]; period: string | null; fileName?: string | null; uploadedAt?: string | null;
 }) {
   const [page, setPage]     = useState(0);
@@ -119,9 +119,9 @@ export default function Dashboard({ rows, period, fileName, uploadedAt }: {
       `}</style>
 
       <Header
-        period={period} stats={stats} regionalsCount={regionGroups.length}
+        period={period} stats={stats}
         page={page} setPage={setPageManual} paused={paused} setPaused={setPaused}
-        fileName={fileName} uploadedAt={uploadedAt}
+        uploadedAt={uploadedAt}
       />
 
       <div key={animKey} className={dir === 'right' ? 'slide-right' : 'slide-left'} style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
@@ -135,10 +135,10 @@ export default function Dashboard({ rows, period, fileName, uploadedAt }: {
 }
 
 /* ─── Header ──────────────────────────────────────────────────────────── */
-function Header({ period, stats, regionalsCount, page, setPage, paused, setPaused, fileName, uploadedAt }: {
+function Header({ period, stats, page, setPage, paused, setPaused, uploadedAt }: {
   period: string | null; stats: { total: number; avg: number; ok: number; focus: number };
-  regionalsCount: number; page: number; setPage: (p: number) => void; paused: boolean; setPaused: (v: boolean) => void;
-  fileName?: string | null; uploadedAt?: string | null;
+  page: number; setPage: (p: number) => void; paused: boolean; setPaused: (v: boolean) => void;
+  uploadedAt?: string | null;
 }) {
   return (
     <header className="flex flex-col gap-4">
@@ -152,13 +152,9 @@ function Header({ period, stats, regionalsCount, page, setPage, paused, setPause
               </span>
             )}
           </h1>
-          <p className="text-sm text-zinc-400 mt-1">
-            Performance scoring &amp; gamification — {stats.total} RM across {regionalsCount} regionals
-          </p>
-          {(fileName || uploadedAt) && (
-            <p className="text-xs text-zinc-600 mt-1">
-              {fileName && <>📄 {fileName}</>}
-              {uploadedAt && <span className="ml-2">· uploaded {new Date(uploadedAt).toLocaleString('id-ID')}</span>}
+          {uploadedAt && (
+            <p className="text-sm md:text-base text-zinc-300 mt-1.5">
+              🕒 Last Updated: <span className="font-semibold text-zinc-100">{new Date(uploadedAt).toLocaleString('id-ID')}</span>
             </p>
           )}
         </div>
