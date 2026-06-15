@@ -367,29 +367,29 @@ function RegionalBarChart({ groups }: { groups: { region: string; members: KpiRo
   const colors = ['#10b981', '#3b82f6', '#a78bfa', '#f59e0b'];
   const ordered = [...groups].sort((a, b) => a.region.localeCompare(b.region));
   return (
-    <div className="mt-6 bg-zinc-900/60 border border-zinc-800 rounded-2xl p-6">
-      <div className="flex items-center gap-2 mb-5">
-        <span className="text-2xl">🚩</span>
-        <h3 className="text-xl md:text-2xl font-bold">Regional comparison</h3>
-        <span className="text-sm text-zinc-500 ml-auto">scale {min}% – {max}%</span>
+    <div className="mt-6 bg-zinc-900/60 border border-zinc-800 rounded-2xl p-5">
+      <div className="flex items-center gap-2 mb-4">
+        <span className="text-lg">🚩</span>
+        <h3 className="text-base md:text-lg font-bold">Regional comparison</h3>
+        <span className="text-xs text-zinc-500 ml-auto">scale {min}% – {max}%</span>
       </div>
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-3">
         {ordered.map((g, i) => {
           const v = Math.max(min, Math.min(max, g.avg * 100));
           const w = ((v - min) / (max - min)) * 100;
           return (
-            <div key={g.region} className="grid grid-cols-[200px_1fr_110px] gap-4 items-center">
-              <div className="text-lg md:text-xl font-semibold text-zinc-200 truncate" title={g.region}>{g.region}</div>
-              <div className="h-10 bg-zinc-800/60 rounded-lg relative overflow-hidden">
-                <div className="h-full rounded-lg transition-all" style={{ width: `${w}%`, background: colors[i % colors.length] }} />
+            <div key={g.region} className="grid grid-cols-[150px_1fr_80px] gap-3 items-center">
+              <div className="text-sm md:text-base font-semibold text-zinc-300 truncate" title={g.region}>{g.region}</div>
+              <div className="h-7 bg-zinc-800/60 rounded relative overflow-hidden">
+                <div className="h-full rounded transition-all" style={{ width: `${w}%`, background: colors[i % colors.length] }} />
               </div>
-              <div className="text-xl md:text-2xl font-black text-right">{pct(g.avg)}</div>
+              <div className="text-base md:text-lg font-bold text-right">{pct(g.avg)}</div>
             </div>
           );
         })}
-        <div className="grid grid-cols-[200px_1fr_110px] gap-4 mt-1">
+        <div className="grid grid-cols-[150px_1fr_80px] gap-3 mt-1">
           <div />
-          <div className="flex justify-between text-xs text-zinc-600">
+          <div className="flex justify-between text-[10px] text-zinc-600">
             {Array.from({ length: max - min + 1 }, (_, i) => min + i).map(v => <span key={v}>{v}%</span>)}
           </div>
           <div />
