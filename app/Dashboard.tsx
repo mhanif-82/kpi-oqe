@@ -38,13 +38,13 @@ export default function Dashboard({ rows, kpiDefs, period, fileName, uploadedAt 
 
   const navigate = useCallback((delta: 1 | -1) => {
     setDir(delta === 1 ? 'right' : 'left');
-    setPage(p => (p + delta + 3) % 3);
+    setPage(p => (p + delta + 4) % 4);
     setAnimKey(k => k + 1);
   }, []);
 
   // Auto-rotate — skip leaderboard page (scroll handles its transition)
   useEffect(() => {
-    if (paused || page === 2) return;
+    if (paused || page === 3) return;
     const t = setInterval(() => navigate(1), settings.transitionMs);
     return () => clearInterval(t);
   }, [paused, page, settings.transitionMs, navigate]);
@@ -125,9 +125,10 @@ export default function Dashboard({ rows, kpiDefs, period, fileName, uploadedAt 
       />
 
       <div key={animKey} className={dir === 'right' ? 'slide-right' : 'slide-left'} style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-        {page === 0 && <PageOne top5={top5} worst5={worst5} regionLabel={regionLabel} totalCount={rows.length} />}
-        {page === 1 && <PageRegional groups={regionGroups} />}
-        {page === 2 && <PageLeaderboard sorted={sorted} regionLabel={regionLabel} kpiDefs={kpiDefs} scrollSpeed={settings.scrollSpeed} onScrollDone={onLeaderboardDone} />}
+        {page === 0 && <PageTop top5={top5} regionLabel={regionLabel} />}
+        {page === 1 && <PageCoaching worst5={worst5} regionLabel={regionLabel} totalCount={rows.length} />}
+        {page === 2 && <PageRegional groups={regionGroups} />}
+        {page === 3 && <PageLeaderboard sorted={sorted} regionLabel={regionLabel} kpiDefs={kpiDefs} scrollSpeed={settings.scrollSpeed} onScrollDone={onLeaderboardDone} />}
       </div>
     </div>
   );
@@ -162,7 +163,7 @@ function Header({ period, stats, regionalsCount, page, setPage, paused, setPause
           )}
         </div>
         <div className="flex items-center gap-2">
-          {['Highlight', 'Regional', 'Leaderboard'].map((t, i) => (
+          {['Top 5', 'Coaching', 'Regional', 'Leaderboard'].map((t, i) => (
             <button key={t} onClick={() => setPage(i)} className={`px-3 py-1.5 rounded-md text-xs font-medium ${page === i ? 'bg-zinc-100 text-zinc-900' : 'bg-zinc-900 text-zinc-400 hover:bg-zinc-800'}`}>{t}</button>
           ))}
           <button onClick={() => setPaused(!paused)} className="px-3 py-1.5 rounded-md text-xs font-medium bg-zinc-900 text-zinc-400 hover:bg-zinc-800" title="Space">
@@ -195,27 +196,33 @@ function StatCard({ label, value, sub, tone }: { label: string; value: string; s
   );
 }
 
-/* ─── Page 1: Highlight ───────────────────────────────────────────────── */
-function PageOne({ top5, worst5, regionLabel, totalCount }: { top5: KpiRow[]; worst5: KpiRow[]; regionLabel: (n: string) => string; totalCount: number }) {
+/* ─── Page 1: Top 5 Best (podium besar) ───────────────────────────────── */
+function PageTop({ top5, regionLabel }: { top5: KpiRow[]; regionLabel: (n: string) => string }) {
   const allPerfect = top5.every(r => r.pencapaian >= 1);
   return (
-    <div className="flex-1 min-h-0 overflow-auto flex flex-col gap-4">
-      <section>
-        <div className="flex items-baseline gap-3 mb-3">
-          <h2 className="text-lg font-bold flex items-center gap-2">🏆 Top 5 best performers</h2>
-          {allPerfect && <span className="text-xs text-amber-400 font-semibold">— PERFECT SCORE 100% 🔥</span>}
-        </div>
+    <div className="flex-1 min-h-0 flex flex-col">
+      <div className="flex items-baseline gap-3 mb-4 shrink-0">
+        <h2 className="text-2xl md:text-3xl font-bold flex items-center gap-2">🏆 Top 5 Best Performers</h2>
+        {allPerfect && <span className="text-base text-amber-400 font-semibold">— PERFECT SCORE 100% 🔥</span>}
+      </div>
+      <div className="flex-1 min-h-0 flex items-center">
         <Podium top5={top5} regionLabel={regionLabel} />
-      </section>
-      <section>
-        <div className="flex items-baseline gap-3 mb-2">
-          <h2 className="text-lg font-bold flex items-center gap-2">⚠ Top 5 perlu coaching</h2>
-          <span className="text-xs text-zinc-400">— area improvement spotlight</span>
-        </div>
-        <div className="flex flex-col gap-1.5">
-          {worst5.map((r, i) => <CoachRow key={r.name} rank={totalCount - i} row={r} regionLabel={regionLabel} severity={r.pencapaian < 0.95 ? 'high' : 'med'} />)}
-        </div>
-      </section>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Page 2: Top 5 Coaching (baris besar) ────────────────────────────── */
+function PageCoaching({ worst5, regionLabel, totalCount }: { worst5: KpiRow[]; regionLabel: (n: string) => string; totalCount: number }) {
+  return (
+    <div className="flex-1 min-h-0 flex flex-col">
+      <div className="flex items-baseline gap-3 mb-4 shrink-0">
+        <h2 className="text-2xl md:text-3xl font-bold flex items-center gap-2">⚠ Top 5 Perlu Coaching</h2>
+        <span className="text-base text-zinc-400">— area improvement spotlight</span>
+      </div>
+      <div className="flex-1 min-h-0 grid gap-3" style={{ gridTemplateRows: `repeat(${worst5.length}, minmax(0, 1fr))` }}>
+        {worst5.map((r, i) => <CoachRow key={r.name} rank={totalCount - i} row={r} regionLabel={regionLabel} severity={r.pencapaian < 0.95 ? 'high' : 'med'} />)}
+      </div>
     </div>
   );
 }
@@ -223,14 +230,14 @@ function PageOne({ top5, worst5, regionLabel, totalCount }: { top5: KpiRow[]; wo
 function Podium({ top5, regionLabel }: { top5: KpiRow[]; regionLabel: (n: string) => string }) {
   const [r1, r2, r3, r4, r5] = top5;
   return (
-    <div className="flex flex-col gap-4">
-      <div className="grid grid-cols-3 gap-3 md:gap-5 items-end">
+    <div className="w-full flex flex-col gap-5">
+      <div className="grid grid-cols-3 gap-4 md:gap-6 items-end">
         {r2 && <PodiumCard rank={2} row={r2} regionLabel={regionLabel} />}
         {r1 && <PodiumCard rank={1} row={r1} regionLabel={regionLabel} />}
         {r3 && <PodiumCard rank={3} row={r3} regionLabel={regionLabel} />}
       </div>
       {(r4 || r5) && (
-        <div className="grid grid-cols-2 gap-3 md:gap-5">
+        <div className="grid grid-cols-2 gap-4 md:gap-6">
           {r4 && <MinorCard rank={4} row={r4} regionLabel={regionLabel} />}
           {r5 && <MinorCard rank={5} row={r5} regionLabel={regionLabel} />}
         </div>
@@ -250,17 +257,17 @@ function PodiumCard({ rank, row, regionLabel }: { rank: 1 | 2 | 3; row: KpiRow; 
   const isPerfect = row.pencapaian >= 1;
   const big = rank === 1;
   return (
-    <div className={`relative rounded-xl border p-2.5 md:p-3 flex flex-col items-center text-center gap-1 ${s.bg} ${s.glow} ${s.height}`}>
-      <div className={`absolute -top-3.5 left-1/2 -translate-x-1/2 ${big ? 'text-3xl' : 'text-xl'}`}>{s.icon}</div>
-      <div className={`text-[9px] font-bold tracking-[0.18em] mt-2 ${s.text}`}>{s.label}</div>
-      <div className={`${big ? 'w-12 h-12 text-base' : 'w-10 h-10 text-sm'} rounded-full bg-gradient-to-br ${s.avatar} ${s.ring} flex items-center justify-center font-black text-white shadow`}>
+    <div className={`relative rounded-2xl border p-5 md:p-6 flex flex-col items-center text-center gap-2 ${s.bg} ${s.glow} ${s.height}`}>
+      <div className={`absolute -top-5 left-1/2 -translate-x-1/2 ${big ? 'text-5xl' : 'text-4xl'}`}>{s.icon}</div>
+      <div className={`text-sm md:text-base font-bold tracking-[0.18em] mt-3 ${s.text}`}>{s.label}</div>
+      <div className={`${big ? 'w-24 h-24 text-3xl' : 'w-20 h-20 text-2xl'} rounded-full bg-gradient-to-br ${s.avatar} ${s.ring} flex items-center justify-center font-black text-white shadow`}>
         {initials(row.name)}
       </div>
-      <div className={`font-bold ${big ? 'text-sm' : 'text-xs'} leading-tight line-clamp-2`}>{row.name}</div>
-      <div className="text-[10px] text-zinc-400 line-clamp-1">{regionLabel(row.regional)}</div>
-      <div className={`${big ? 'text-2xl md:text-3xl' : 'text-xl md:text-2xl'} font-black ${s.text}`}>{pct(row.pencapaian)}</div>
+      <div className={`font-bold ${big ? 'text-2xl md:text-3xl' : 'text-xl md:text-2xl'} leading-tight`}>{row.name}</div>
+      <div className="text-sm md:text-base text-zinc-400">{regionLabel(row.regional)}</div>
+      <div className={`${big ? 'text-4xl md:text-5xl' : 'text-3xl md:text-4xl'} font-black ${s.text}`}>{pct(row.pencapaian)}</div>
       {isPerfect && (
-        <div className={`px-2 py-0.5 rounded-full text-[9px] font-black tracking-widest bg-gradient-to-r ${rank === 1 ? 'from-amber-400 to-yellow-300 text-amber-950' : rank === 2 ? 'from-zinc-200 to-zinc-400 text-zinc-900' : 'from-orange-300 to-orange-500 text-orange-950'}`}>
+        <div className={`px-3 py-1 rounded-full text-xs md:text-sm font-black tracking-widest bg-gradient-to-r ${rank === 1 ? 'from-amber-400 to-yellow-300 text-amber-950' : rank === 2 ? 'from-zinc-200 to-zinc-400 text-zinc-900' : 'from-orange-300 to-orange-500 text-orange-950'}`}>
           ⭐ PERFECT
         </div>
       )}
@@ -271,16 +278,16 @@ function PodiumCard({ rank, row, regionLabel }: { rank: 1 | 2 | 3; row: KpiRow; 
 function MinorCard({ rank, row, regionLabel }: { rank: number; row: KpiRow; regionLabel: (n: string) => string }) {
   const isPerfect = row.pencapaian >= 1;
   return (
-    <div className="rounded-lg border border-zinc-800 bg-zinc-900/60 p-2 flex items-center gap-2">
-      <div className="text-[9px] font-bold text-zinc-500 w-7 text-center leading-tight">#<span className="text-sm text-zinc-200">{rank}</span></div>
-      <div className="w-8 h-8 rounded-full bg-zinc-700 flex items-center justify-center text-[11px] font-bold text-white shrink-0">{initials(row.name)}</div>
+    <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-3.5 flex items-center gap-4">
+      <div className="text-sm font-bold text-zinc-500 w-10 text-center leading-tight">#<span className="text-2xl text-zinc-200">{rank}</span></div>
+      <div className="w-14 h-14 rounded-full bg-zinc-700 flex items-center justify-center text-lg font-bold text-white shrink-0">{initials(row.name)}</div>
       <div className="flex-1 min-w-0">
-        <div className="font-bold text-xs truncate">{row.name}</div>
-        <div className="text-[10px] text-zinc-500 truncate">{regionLabel(row.regional)}</div>
+        <div className="font-bold text-xl md:text-2xl truncate">{row.name}</div>
+        <div className="text-sm md:text-base text-zinc-500 truncate">{regionLabel(row.regional)}</div>
       </div>
       <div className="text-right">
-        <div className="text-sm font-bold">{pct(row.pencapaian)}</div>
-        {isPerfect && <div className="text-[8px] font-black text-amber-400 tracking-wider">⭐</div>}
+        <div className="text-2xl md:text-3xl font-bold">{pct(row.pencapaian)}</div>
+        {isPerfect && <div className="text-xs font-black text-amber-400 tracking-wider">⭐ PERFECT</div>}
       </div>
     </div>
   );
@@ -292,26 +299,26 @@ function CoachRow({ rank, row, regionLabel, severity }: { rank: number; row: Kpi
   const totalText = severity === 'high' ? 'text-red-400' : 'text-amber-400';
   const rankText = severity === 'high' ? 'text-red-400' : 'text-amber-400';
   return (
-    <div className="bg-zinc-900/60 border border-zinc-800 rounded-lg overflow-hidden flex items-stretch">
-      <div className={`w-1 ${bar}`} />
-      <div className="flex-1 grid grid-cols-12 gap-2 items-center px-3 py-2">
-        <div className={`col-span-1 text-sm font-bold ${rankText}`}>#{rank}</div>
-        <div className="col-span-4">
-          <div className="font-bold text-sm leading-tight flex items-center gap-2 flex-wrap">
-            {row.name}
-            <span className="text-[10px] font-black tracking-widest px-2.5 py-0.5 rounded-full bg-red-500 text-white shadow-[0_0_12px_rgba(239,68,68,0.6)] animate-pulse">⚠ WARNING</span>
-          </div>
-          <div className="text-[11px] text-zinc-500 mt-0.5">{regionLabel(row.regional)}{row.aom ? ` · ${row.aom}` : ''}</div>
-        </div>
+    <div className="bg-zinc-900/60 border border-zinc-800 rounded-xl overflow-hidden flex items-stretch h-full">
+      <div className={`w-2 ${bar}`} />
+      <div className="flex-1 grid grid-cols-12 gap-3 items-center px-5">
+        <div className={`col-span-1 text-2xl md:text-3xl font-black ${rankText}`}>#{rank}</div>
         <div className="col-span-5">
-          <div className="text-[11px] text-zinc-400 flex items-center gap-1.5">Weak: <b className="text-red-300">{weak.name}</b></div>
-          <div className={`text-[11px] mt-0.5 inline-block px-2 py-0.5 rounded font-bold ring-1 ${
+          <div className="font-bold text-xl md:text-3xl leading-tight flex items-center gap-3 flex-wrap">
+            {row.name}
+            <span className="text-xs font-black tracking-widest px-3 py-1 rounded-full bg-red-500 text-white shadow-[0_0_12px_rgba(239,68,68,0.6)] animate-pulse">⚠ WARNING</span>
+          </div>
+          <div className="text-sm md:text-base text-zinc-500 mt-1">{regionLabel(row.regional)}{row.aom ? ` · ${row.aom}` : ''}</div>
+        </div>
+        <div className="col-span-4">
+          <div className="text-sm md:text-base text-zinc-400 flex items-center gap-1.5">Weak: <b className="text-red-300">{weak.name}</b></div>
+          <div className={`text-sm md:text-base mt-1 inline-block px-3 py-1 rounded font-bold ring-1 ${
             weak.value < 0.5 ? 'bg-red-500/20 text-red-300 ring-red-500/50 shadow-[0_0_8px_rgba(239,68,68,0.4)]'
             : weak.value < 0.9 ? 'bg-amber-500/20 text-amber-300 ring-amber-500/50'
             : 'bg-zinc-800 text-zinc-200 ring-zinc-700'
           }`}>🔻 {pct(weak.value)}</div>
         </div>
-        <div className={`col-span-2 text-right text-lg font-bold ${totalText}`}>{pct(row.pencapaian)}</div>
+        <div className={`col-span-2 text-right text-3xl md:text-4xl font-black ${totalText}`}>{pct(row.pencapaian)}</div>
       </div>
     </div>
   );
