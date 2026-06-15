@@ -163,7 +163,7 @@ function Header({ period, stats, regionalsCount, page, setPage, paused, setPause
           )}
         </div>
         <div className="flex items-center gap-2">
-          {['Top 5', 'Coaching', 'Regional', 'Leaderboard'].map((t, i) => (
+          {['Top 5 Best', 'Top 5 Worst', 'Regional', 'Leaderboard'].map((t, i) => (
             <button key={t} onClick={() => setPage(i)} className={`px-3 py-1.5 rounded-md text-xs font-medium ${page === i ? 'bg-zinc-100 text-zinc-900' : 'bg-zinc-900 text-zinc-400 hover:bg-zinc-800'}`}>{t}</button>
           ))}
           <button onClick={() => setPaused(!paused)} className="px-3 py-1.5 rounded-md text-xs font-medium bg-zinc-900 text-zinc-400 hover:bg-zinc-800" title="Space">
@@ -198,12 +198,10 @@ function StatCard({ label, value, sub, tone }: { label: string; value: string; s
 
 /* ─── Page 1: Top 5 Best (podium besar) ───────────────────────────────── */
 function PageTop({ top5, regionLabel }: { top5: KpiRow[]; regionLabel: (n: string) => string }) {
-  const allPerfect = top5.every(r => r.pencapaian >= 1);
   return (
     <div className="flex-1 min-h-0 flex flex-col">
       <div className="flex items-baseline gap-3 mb-4 shrink-0">
         <h2 className="text-2xl md:text-3xl font-bold flex items-center gap-2">🏆 Top 5 Best Performers</h2>
-        {allPerfect && <span className="text-base text-amber-400 font-semibold">— PERFECT SCORE 100% 🔥</span>}
       </div>
       <div className="flex-1 min-h-0 flex items-center">
         <Podium top5={top5} regionLabel={regionLabel} />
@@ -246,10 +244,33 @@ function Podium({ top5, regionLabel }: { top5: KpiRow[]; regionLabel: (n: string
   );
 }
 
+// Nilai gradient eksplisit (rgba/hex) — kompatibel dengan browser TV Samsung/Tizen
+// yang tidak mendukung sintaks gradient modern Tailwind v4 ("in oklab").
 const PODIUM_STYLE = {
-  1: { bg: 'bg-gradient-to-br from-amber-400/30 via-amber-500/15 to-amber-900/40 border-amber-400/60', glow: 'shadow-[0_0_60px_-10px_rgba(245,158,11,0.55)]', ring: 'ring-2 ring-amber-300/40', avatar: 'from-amber-300 via-amber-500 to-amber-700', text: 'text-amber-300', medal: '🥇', icon: '🏆', label: 'CHAMPION', height: 'pt-2 -mt-4' },
-  2: { bg: 'bg-gradient-to-br from-zinc-300/15 via-zinc-400/10 to-zinc-700/40 border-zinc-400/40', glow: 'shadow-[0_0_30px_-10px_rgba(212,212,216,0.4)]', ring: 'ring-1 ring-zinc-300/30', avatar: 'from-zinc-200 via-zinc-400 to-zinc-600', text: 'text-zinc-200', medal: '🥈', icon: '🥈', label: 'RUNNER-UP', height: 'pt-4' },
-  3: { bg: 'bg-gradient-to-br from-orange-400/20 via-orange-600/10 to-orange-900/40 border-orange-500/40', glow: 'shadow-[0_0_30px_-10px_rgba(234,88,12,0.4)]', ring: 'ring-1 ring-orange-400/30', avatar: 'from-orange-300 via-orange-500 to-orange-700', text: 'text-orange-300', medal: '🥉', icon: '🥉', label: 'THIRD', height: 'pt-4' },
+  1: {
+    cardBg: 'linear-gradient(135deg, rgba(245,158,11,0.30), rgba(245,158,11,0.12) 50%, rgba(120,53,15,0.40))',
+    avatarBg: 'linear-gradient(135deg, #fcd34d, #f59e0b, #b45309)',
+    glow: '0 0 60px -10px rgba(245,158,11,0.55)',
+    border: 'rgba(251,191,36,0.6)', text: '#fcd34d',
+    badgeBg: 'linear-gradient(90deg, #fbbf24, #fde047)', badgeText: '#451a03',
+    icon: '🏆', label: 'CHAMPION', height: 'pt-2 -mt-4',
+  },
+  2: {
+    cardBg: 'linear-gradient(135deg, rgba(212,212,216,0.15), rgba(161,161,170,0.10) 50%, rgba(63,63,70,0.40))',
+    avatarBg: 'linear-gradient(135deg, #e4e4e7, #a1a1aa, #52525b)',
+    glow: '0 0 30px -10px rgba(212,212,216,0.4)',
+    border: 'rgba(161,161,170,0.4)', text: '#e4e4e7',
+    badgeBg: 'linear-gradient(90deg, #e4e4e7, #a1a1aa)', badgeText: '#18181b',
+    icon: '🥈', label: 'RUNNER-UP', height: 'pt-4',
+  },
+  3: {
+    cardBg: 'linear-gradient(135deg, rgba(251,146,60,0.20), rgba(234,88,12,0.10) 50%, rgba(124,45,18,0.40))',
+    avatarBg: 'linear-gradient(135deg, #fdba74, #f97316, #c2410c)',
+    glow: '0 0 30px -10px rgba(234,88,12,0.4)',
+    border: 'rgba(249,115,22,0.4)', text: '#fdba74',
+    badgeBg: 'linear-gradient(90deg, #fdba74, #f97316)', badgeText: '#431407',
+    icon: '🥉', label: 'THIRD', height: 'pt-4',
+  },
 } as const;
 
 function PodiumCard({ rank, row, regionLabel }: { rank: 1 | 2 | 3; row: KpiRow; regionLabel: (n: string) => string }) {
@@ -257,17 +278,19 @@ function PodiumCard({ rank, row, regionLabel }: { rank: 1 | 2 | 3; row: KpiRow; 
   const isPerfect = row.pencapaian >= 1;
   const big = rank === 1;
   return (
-    <div className={`relative rounded-2xl border p-5 md:p-6 flex flex-col items-center text-center gap-2 ${s.bg} ${s.glow} ${s.height}`}>
+    <div className={`relative rounded-2xl border p-5 md:p-6 flex flex-col items-center text-center gap-2 ${s.height}`}
+         style={{ background: s.cardBg, boxShadow: s.glow, borderColor: s.border }}>
       <div className={`absolute -top-5 left-1/2 -translate-x-1/2 ${big ? 'text-5xl' : 'text-4xl'}`}>{s.icon}</div>
-      <div className={`text-sm md:text-base font-bold tracking-[0.18em] mt-3 ${s.text}`}>{s.label}</div>
-      <div className={`${big ? 'w-24 h-24 text-3xl' : 'w-20 h-20 text-2xl'} rounded-full bg-gradient-to-br ${s.avatar} ${s.ring} flex items-center justify-center font-black text-white shadow`}>
+      <div className="text-sm md:text-base font-bold tracking-[0.18em] mt-3" style={{ color: s.text }}>{s.label}</div>
+      <div className={`${big ? 'w-24 h-24 text-3xl' : 'w-20 h-20 text-2xl'} rounded-full flex items-center justify-center font-black text-white shadow`}
+           style={{ background: s.avatarBg }}>
         {initials(row.name)}
       </div>
       <div className={`font-bold ${big ? 'text-2xl md:text-3xl' : 'text-xl md:text-2xl'} leading-tight`}>{row.name}</div>
       <div className="text-sm md:text-base text-zinc-400">{regionLabel(row.regional)}</div>
-      <div className={`${big ? 'text-4xl md:text-5xl' : 'text-3xl md:text-4xl'} font-black ${s.text}`}>{pct(row.pencapaian)}</div>
+      <div className={`${big ? 'text-4xl md:text-5xl' : 'text-3xl md:text-4xl'} font-black`} style={{ color: s.text }}>{pct(row.pencapaian)}</div>
       {isPerfect && (
-        <div className={`px-3 py-1 rounded-full text-xs md:text-sm font-black tracking-widest bg-gradient-to-r ${rank === 1 ? 'from-amber-400 to-yellow-300 text-amber-950' : rank === 2 ? 'from-zinc-200 to-zinc-400 text-zinc-900' : 'from-orange-300 to-orange-500 text-orange-950'}`}>
+        <div className="px-3 py-1 rounded-full text-xs md:text-sm font-black tracking-widest" style={{ background: s.badgeBg, color: s.badgeText }}>
           ⭐ PERFECT
         </div>
       )}
@@ -332,7 +355,7 @@ function PageRegional({ groups }: { groups: { region: string; members: KpiRow[];
         <h2 className="text-2xl md:text-3xl font-bold flex items-center gap-2">⚔️ Regional Battle 🛡️</h2>
       </div>
       <div className="grid gap-5" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))' }}>
-        {groups.map((g, i) => <RegionalCard key={g.region} group={g} rank={i + 1} total={groups.length} />)}
+        {groups.map((g, i) => <RegionalCard key={g.region} group={g} rank={i + 1} />)}
       </div>
       <RegionalBarChart groups={groups} />
     </section>
@@ -376,25 +399,26 @@ function RegionalBarChart({ groups }: { groups: { region: string; members: KpiRo
   );
 }
 
+// Inline gradient eksplisit — kompatibel browser TV Samsung/Tizen.
 const REGION_THEME = [
-  { ring: 'ring-amber-400/60', bg: 'bg-gradient-to-br from-amber-500/20 via-amber-900/30 to-zinc-950 border-amber-500/50', glow: 'shadow-[0_0_50px_-10px_rgba(245,158,11,0.5)]', accent: 'text-amber-300', bar: 'from-amber-400 to-yellow-300', icon: '🏆', label: 'CHAMPION REGION' },
-  { ring: 'ring-zinc-300/40', bg: 'bg-gradient-to-br from-zinc-300/10 via-zinc-700/30 to-zinc-950 border-zinc-400/30', glow: 'shadow-[0_0_30px_-10px_rgba(212,212,216,0.3)]', accent: 'text-zinc-200', bar: 'from-zinc-300 to-zinc-500', icon: '🛡️', label: 'CONTENDER' },
-  { ring: 'ring-orange-400/40', bg: 'bg-gradient-to-br from-orange-500/15 via-orange-900/25 to-zinc-950 border-orange-500/30', glow: 'shadow-[0_0_30px_-10px_rgba(234,88,12,0.3)]', accent: 'text-orange-300', bar: 'from-orange-400 to-orange-600', icon: '⚔️', label: 'CHALLENGER' },
+  { cardBg: 'linear-gradient(135deg, rgba(245,158,11,0.20), rgba(120,53,15,0.30) 50%, #09090b)', glow: '0 0 50px -10px rgba(245,158,11,0.5)', border: 'rgba(245,158,11,0.5)', accent: '#fcd34d', bar: 'linear-gradient(90deg, #fbbf24, #fde047)', icon: '🏆', label: 'CHAMPION REGION' },
+  { cardBg: 'linear-gradient(135deg, rgba(212,212,216,0.10), rgba(63,63,70,0.30) 50%, #09090b)', glow: '0 0 30px -10px rgba(212,212,216,0.3)', border: 'rgba(161,161,170,0.3)', accent: '#e4e4e7', bar: 'linear-gradient(90deg, #d4d4d8, #71717a)', icon: '🛡️', label: 'CONTENDER' },
+  { cardBg: 'linear-gradient(135deg, rgba(249,115,22,0.15), rgba(124,45,18,0.25) 50%, #09090b)', glow: '0 0 30px -10px rgba(234,88,12,0.3)', border: 'rgba(249,115,22,0.3)', accent: '#fdba74', bar: 'linear-gradient(90deg, #fb923c, #ea580c)', icon: '⚔️', label: 'CHALLENGER' },
 ];
 
-function RegionalCard({ group: g, rank, total }: { group: { region: string; members: KpiRow[]; avg: number; champ: KpiRow }; rank: number; total: number }) {
+function RegionalCard({ group: g, rank }: { group: { region: string; members: KpiRow[]; avg: number; champ: KpiRow }; rank: number }) {
   const t = REGION_THEME[Math.min(rank - 1, REGION_THEME.length - 1)] ?? REGION_THEME[2];
   const medal = ['🥇', '🥈', '🥉'][rank - 1] ?? '🏅';
   return (
-    <div className={`relative rounded-2xl border p-6 ${t.bg} ${t.glow} overflow-hidden`}>
+    <div className="relative rounded-2xl border p-6 overflow-hidden" style={{ background: t.cardBg, boxShadow: t.glow, borderColor: t.border }}>
       <div className="absolute -top-8 -right-8 text-9xl opacity-5 select-none">{t.icon}</div>
 
       {/* Ranking besar */}
       <div className="flex items-center justify-between relative mb-2">
-        <div className={`text-xs md:text-sm font-black tracking-[0.25em] ${t.accent}`}>{t.label}</div>
+        <div className="text-xs md:text-sm font-black tracking-[0.25em]" style={{ color: t.accent }}>{t.label}</div>
         <div className="flex items-center gap-2">
           <span className="text-4xl md:text-5xl leading-none">{medal}</span>
-          <span className={`text-3xl md:text-4xl font-black ${t.accent}`}>#{rank}</span>
+          <span className="text-3xl md:text-4xl font-black" style={{ color: t.accent }}>#{rank}</span>
         </div>
       </div>
 
@@ -407,9 +431,9 @@ function RegionalCard({ group: g, rank, total }: { group: { region: string; memb
         <span className="truncate">🏅 <b className="text-zinc-200">{g.champ.name}</b></span>
       </div>
 
-      <div className={`text-6xl md:text-7xl font-black mt-4 ${t.accent}`}>{pct(g.avg)}</div>
+      <div className="text-6xl md:text-7xl font-black mt-4" style={{ color: t.accent }}>{pct(g.avg)}</div>
       <div className="h-3 bg-black/40 rounded-full mt-4 overflow-hidden ring-1 ring-white/5">
-        <div className={`h-full bg-gradient-to-r ${t.bar}`} style={{ width: `${Math.min(100, g.avg * 100)}%` }} />
+        <div className="h-full" style={{ width: `${Math.min(100, g.avg * 100)}%`, background: t.bar }} />
       </div>
     </div>
   );
