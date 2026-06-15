@@ -11,7 +11,7 @@ const initials = (n: string) => n.split(/\s+/).filter(Boolean).slice(0, 2).map(s
 type KpiDef = { name: string; weight: number };
 type Settings = { transitionMs: number; scrollSpeed: number };
 
-export default function Dashboard({ rows, kpiDefs, period, fileName, uploadedAt }: {
+export default function Dashboard({ rows, period, fileName, uploadedAt }: {
   rows: KpiRow[]; kpiDefs: KpiDef[]; period: string | null; fileName?: string | null; uploadedAt?: string | null;
 }) {
   const [page, setPage]     = useState(0);
@@ -128,7 +128,7 @@ export default function Dashboard({ rows, kpiDefs, period, fileName, uploadedAt 
         {page === 0 && <PageTop top5={top5} regionLabel={regionLabel} />}
         {page === 1 && <PageCoaching worst5={worst5} regionLabel={regionLabel} totalCount={rows.length} />}
         {page === 2 && <PageRegional groups={regionGroups} />}
-        {page === 3 && <PageLeaderboard sorted={sorted} regionLabel={regionLabel} kpiDefs={kpiDefs} scrollSpeed={settings.scrollSpeed} onScrollDone={onLeaderboardDone} />}
+        {page === 3 && <PageLeaderboard sorted={sorted} regionLabel={regionLabel} scrollSpeed={settings.scrollSpeed} onScrollDone={onLeaderboardDone} />}
       </div>
     </div>
   );
@@ -217,7 +217,7 @@ function PageCoaching({ worst5, regionLabel, totalCount }: { worst5: KpiRow[]; r
   return (
     <div className="flex-1 min-h-0 flex flex-col">
       <div className="flex items-baseline gap-3 mb-4 shrink-0">
-        <h2 className="text-2xl md:text-3xl font-bold flex items-center gap-2">⚠ Top 5 Perlu Coaching</h2>
+        <h2 className="text-2xl md:text-3xl font-bold flex items-center gap-2 text-red-400">⚠ Top 5 Terbawah <span className="animate-pulse">(warning!!)</span></h2>
         <span className="text-base text-zinc-400">— area improvement spotlight</span>
       </div>
       <div className="flex-1 min-h-0 grid gap-3" style={{ gridTemplateRows: `repeat(${worst5.length}, minmax(0, 1fr))` }}>
@@ -329,10 +329,9 @@ function PageRegional({ groups }: { groups: { region: string; members: KpiRow[];
   return (
     <section className="flex-1 min-h-0 overflow-auto">
       <div className="flex items-center justify-between mb-5">
-        <h2 className="text-xl font-bold flex items-center gap-2">⚔️ Regional Battle 🛡️</h2>
-        <div className="text-xs text-zinc-500 tracking-widest">VS · VS · VS</div>
+        <h2 className="text-2xl md:text-3xl font-bold flex items-center gap-2">⚔️ Regional Battle 🛡️</h2>
       </div>
-      <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}>
+      <div className="grid gap-5" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))' }}>
         {groups.map((g, i) => <RegionalCard key={g.region} group={g} rank={i + 1} total={groups.length} />)}
       </div>
       <RegionalBarChart groups={groups} />
@@ -385,43 +384,40 @@ const REGION_THEME = [
 
 function RegionalCard({ group: g, rank, total }: { group: { region: string; members: KpiRow[]; avg: number; champ: KpiRow }; rank: number; total: number }) {
   const t = REGION_THEME[Math.min(rank - 1, REGION_THEME.length - 1)] ?? REGION_THEME[2];
+  const medal = ['🥇', '🥈', '🥉'][rank - 1] ?? '🏅';
   return (
-    <div className={`relative rounded-2xl border p-5 ${t.bg} ${t.glow} overflow-hidden`}>
+    <div className={`relative rounded-2xl border p-6 ${t.bg} ${t.glow} overflow-hidden`}>
       <div className="absolute -top-8 -right-8 text-9xl opacity-5 select-none">{t.icon}</div>
-      <div className="flex items-start justify-between relative">
-        <div>
-          <div className={`text-[10px] font-black tracking-[0.25em] ${t.accent}`}>{t.label}</div>
-          <h3 className="text-lg font-bold mt-1 flex items-center gap-2"><span className="text-2xl">{t.icon}</span>{g.region}</h3>
+
+      {/* Ranking besar */}
+      <div className="flex items-center justify-between relative mb-2">
+        <div className={`text-xs md:text-sm font-black tracking-[0.25em] ${t.accent}`}>{t.label}</div>
+        <div className="flex items-center gap-2">
+          <span className="text-4xl md:text-5xl leading-none">{medal}</span>
+          <span className={`text-3xl md:text-4xl font-black ${t.accent}`}>#{rank}</span>
         </div>
-        <div className={`px-3 py-1 rounded-full text-xs font-black ${t.accent} bg-black/40 ring-1 ${t.ring}`}>#{rank}/{total}</div>
       </div>
-      <div className="text-xs text-zinc-400 mt-3 flex items-center gap-2">
+
+      <h3 className="text-2xl md:text-3xl font-bold flex items-center gap-2 leading-tight">
+        <span className="text-3xl md:text-4xl">{t.icon}</span>{g.region}
+      </h3>
+
+      <div className="text-base md:text-lg text-zinc-400 mt-3 flex items-center gap-2 flex-wrap">
         <span>👥 {g.members.length} RM</span><span className="text-zinc-700">·</span>
         <span className="truncate">🏅 <b className="text-zinc-200">{g.champ.name}</b></span>
       </div>
-      <div className={`text-5xl font-black mt-3 ${t.accent}`}>{pct(g.avg)}</div>
-      <div className="h-2 bg-black/40 rounded-full mt-3 overflow-hidden ring-1 ring-white/5">
+
+      <div className={`text-6xl md:text-7xl font-black mt-4 ${t.accent}`}>{pct(g.avg)}</div>
+      <div className="h-3 bg-black/40 rounded-full mt-4 overflow-hidden ring-1 ring-white/5">
         <div className={`h-full bg-gradient-to-r ${t.bar}`} style={{ width: `${Math.min(100, g.avg * 100)}%` }} />
-      </div>
-      <div className="mt-5 space-y-1.5">
-        <div className="text-[10px] tracking-widest text-zinc-500 font-bold">⚔ TOP WARRIORS</div>
-        {[...g.members].sort((a, b) => b.pencapaian - a.pencapaian).slice(0, 3).map((r, idx) => (
-          <div key={r.name} className="flex justify-between items-center text-xs bg-black/30 px-2.5 py-1.5 rounded-md">
-            <span className="flex items-center gap-2">
-              <span className="text-base">{['🥇', '🥈', '🥉'][idx]}</span>
-              <span className="text-zinc-300 truncate">{r.name}</span>
-            </span>
-            <span className={`font-bold ${r.pencapaian >= 0.95 ? 'text-emerald-400' : 'text-amber-400'}`}>{pct(r.pencapaian)}</span>
-          </div>
-        ))}
       </div>
     </div>
   );
 }
 
 /* ─── Page 3: Leaderboard ─────────────────────────────────────────────── */
-function PageLeaderboard({ sorted, regionLabel, kpiDefs, scrollSpeed, onScrollDone }: {
-  sorted: KpiRow[]; regionLabel: (n: string) => string; kpiDefs: KpiDef[];
+function PageLeaderboard({ sorted, regionLabel, scrollSpeed, onScrollDone }: {
+  sorted: KpiRow[]; regionLabel: (n: string) => string;
   scrollSpeed: number; onScrollDone: () => void;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -435,7 +431,6 @@ function PageLeaderboard({ sorted, regionLabel, kpiDefs, scrollSpeed, onScrollDo
     if (isBottom(i)) return 'bg-gradient-to-r from-red-500/10 via-transparent to-transparent border-l-4 border-red-500/60';
     return score < 0.95 ? 'border-l-4 border-amber-500/40' : 'border-l-4 border-transparent';
   };
-  const kpiCls   = (v: number) => v < 0.90 ? 'text-red-400 font-bold' : v >= 0.95 ? 'text-emerald-400 font-semibold' : 'text-amber-400 font-semibold';
   const totalCls = (v: number) => v < 0.90 ? 'text-red-400' : v >= 0.95 ? 'text-emerald-400' : 'text-amber-400';
 
   // Smooth auto-scroll via requestAnimationFrame
@@ -479,45 +474,41 @@ function PageLeaderboard({ sorted, regionLabel, kpiDefs, scrollSpeed, onScrollDo
 
   return (
     <section className="flex-1 flex flex-col min-h-0">
-      <h2 className="text-xl font-bold mb-3 flex items-center gap-2">
-        📊 Full leaderboard <span className="text-xs text-zinc-500 font-normal">— Hall of Fame</span>
+      <h2 className="text-2xl md:text-3xl font-bold mb-4 flex items-center gap-2">
+        📊 Full Leaderboard <span className="text-base text-zinc-500 font-normal">— Hall of Fame</span>
       </h2>
       <div ref={scrollRef} className="flex-1 overflow-auto rounded-xl border border-zinc-800" style={{ scrollBehavior: 'auto' }}>
-        <table className="w-full text-sm">
-          <thead className="sticky top-0 bg-zinc-900 z-10 text-xs uppercase tracking-wider text-zinc-400">
+        <table className="w-full">
+          <thead className="sticky top-0 bg-zinc-900 z-10 text-sm md:text-base uppercase tracking-wider text-zinc-400">
             <tr>
-              <th className="p-3 text-center w-14">Rank</th>
-              <th className="p-3 text-left">RM</th>
-              <th className="p-3 text-left">Region</th>
-              <th className="p-3 text-left">AOM</th>
-              {kpiDefs.map(k => <th key={k.name} className="p-3 text-center" title={`Bobot ${(k.weight * 100).toFixed(0)}%`}>{k.name}</th>)}
-              <th className="p-3 text-center">Total</th>
+              <th className="p-4 text-center w-24">Rank</th>
+              <th className="p-4 text-left">Nama RM</th>
+              <th className="p-4 text-left">Region</th>
+              <th className="p-4 text-left">AOM</th>
+              <th className="p-4 text-right w-40">Total</th>
             </tr>
           </thead>
           <tbody>
             {sorted.map((r, i) => {
               const isPerfect = r.pencapaian >= 1;
               return (
-                <tr key={r.name} className={`border-t border-zinc-800/60 hover:bg-zinc-900/60 transition ${rowTint(i, r.pencapaian)}`}>
-                  <td className="p-2.5 text-center">
+                <tr key={r.name} className={`border-t border-zinc-800/60 ${rowTint(i, r.pencapaian)}`}>
+                  <td className="p-4 text-center">
                     <div className="flex flex-col items-center leading-none">
-                      <span className="text-lg leading-none">{medal(i)}</span>
-                      <span className={`text-xs font-bold mt-0.5 ${i < 3 ? 'text-zinc-200' : 'text-zinc-500'}`}>#{i + 1}</span>
+                      <span className="text-3xl md:text-4xl leading-none">{medal(i)}</span>
+                      <span className={`text-base md:text-lg font-black mt-1 ${i < 3 ? 'text-zinc-100' : 'text-zinc-500'}`}>#{i + 1}</span>
                     </div>
                   </td>
-                  <td className="p-2.5">
-                    <div className="font-bold flex items-center gap-2 flex-wrap">
+                  <td className="p-4">
+                    <div className="font-bold text-xl md:text-2xl flex items-center gap-3 flex-wrap">
                       {r.name}
-                      {isPerfect && <span className="text-[9px] font-black tracking-widest px-1.5 py-0.5 rounded-full bg-amber-400/20 text-amber-300 ring-1 ring-amber-400/40">⭐ PERFECT</span>}
-                      {isBottom(i) && !isPerfect && <span className="text-[9px] font-black tracking-widest px-1.5 py-0.5 rounded-full bg-red-500/20 text-red-300 ring-1 ring-red-500/40">⚠ WARNING</span>}
+                      {isPerfect && <span className="text-xs font-black tracking-widest px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-300 ring-1 ring-amber-400/40">⭐ PERFECT</span>}
+                      {isBottom(i) && !isPerfect && <span className="text-xs font-black tracking-widest px-2 py-0.5 rounded-full bg-red-500/20 text-red-300 ring-1 ring-red-500/40">⚠ WARNING</span>}
                     </div>
                   </td>
-                  <td className="p-2.5 text-zinc-400">{regionLabel(r.regional)}</td>
-                  <td className="p-2.5 text-zinc-400">{r.aom || r.mrm || '-'}</td>
-                  {r.kpis.map(k => (
-                    <td key={k.name} className={`p-2.5 text-center ${kpiCls(k.value)}`}>{pct(k.value)}</td>
-                  ))}
-                  <td className={`p-2.5 text-center font-black text-base ${totalCls(r.pencapaian)}`}>{pct(r.pencapaian)}</td>
+                  <td className="p-4 text-lg md:text-xl text-zinc-400">{regionLabel(r.regional)}</td>
+                  <td className="p-4 text-lg md:text-xl text-zinc-400">{r.aom || r.mrm || '-'}</td>
+                  <td className={`p-4 text-right font-black text-3xl md:text-4xl ${totalCls(r.pencapaian)}`}>{pct(r.pencapaian)}</td>
                 </tr>
               );
             })}
