@@ -17,6 +17,10 @@ function sourcingCount(d: unknown) {
   }
   return 0;
 }
+function peopleCount(d: unknown) {
+  if (d && typeof d === 'object' && Array.isArray((d as { people?: unknown[] }).people)) return (d as { people: unknown[] }).people.length;
+  return 0;
+}
 
 export default async function AdminPage() {
   const sb = await createClient();
@@ -33,7 +37,7 @@ export default async function AdminPage() {
       .maybeSingle();
     return data as Snap;
   };
-  const [rm, sourcing] = await Promise.all([latest('rm'), latest('sourcing')]);
+  const [rm, sourcing, bso, apm] = await Promise.all([latest('rm'), latest('sourcing'), latest('bso'), latest('apm')]);
 
   return (
     <main className="min-h-screen bg-[#0a0a0a] text-zinc-100"
@@ -44,27 +48,30 @@ export default async function AdminPage() {
             <h1 className="text-2xl md:text-3xl font-bold tracking-tight flex items-center gap-2">
               <span>🏆</span> Performance Dashboard Admin
             </h1>
-            <p className="text-xs text-zinc-500 mt-1">Upload &amp; publish data KPI — RM &amp; Sourcing</p>
+            <p className="text-xs text-zinc-500 mt-1">Upload &amp; publish data KPI — RM · Sourcing · BSO · APM</p>
           </div>
           <div className="flex items-center gap-2">
             <span className="text-xs text-zinc-500 hidden md:inline">{user.email}</span>
             <a href="/" className="text-xs bg-zinc-900 border border-zinc-800 hover:border-amber-400/40 px-3 py-1.5 rounded-md">RM ↗</a>
             <a href="/ps" className="text-xs bg-zinc-900 border border-zinc-800 hover:border-sky-400/40 px-3 py-1.5 rounded-md">Sourcing ↗</a>
+            <a href="/bs" className="text-xs bg-zinc-900 border border-zinc-800 hover:border-emerald-400/40 px-3 py-1.5 rounded-md">BSO ↗</a>
             <form action="/api/logout" method="post">
               <button className="text-xs bg-red-500/10 text-red-300 border border-red-500/20 hover:bg-red-500/20 px-3 py-1.5 rounded-md">Sign out</button>
             </form>
           </div>
         </header>
 
-        {/* Status kedua dashboard */}
+        {/* Status semua dashboard */}
         <section className="mb-6 grid md:grid-cols-2 gap-3">
           <StatusCard title="🏆 RM" tone="amber" snap={rm} count={rm ? `${rmCount(rm.data)} RM` : null} />
           <StatusCard title="🔎 Sourcing" tone="sky" snap={sourcing} count={sourcing ? `${sourcingCount(sourcing.data)} orang` : null} />
+          <StatusCard title="🏢 BSO" tone="emerald" snap={bso} count={bso ? `${peopleCount(bso.data)} BSO` : null} />
+          <StatusCard title="🎖️ APM" tone="violet" snap={apm} count={apm ? `${peopleCount(apm.data)} APM` : null} />
         </section>
 
         <section className="mb-6">
           <h2 className="text-sm font-bold tracking-wider text-zinc-400 uppercase mb-3">Upload data baru</h2>
-          <UploadForm hasRm={!!rm} hasSourcing={!!sourcing} />
+          <UploadForm hasRm={!!rm} hasSourcing={!!sourcing} hasBso={!!bso} hasApm={!!apm} />
         </section>
 
         <section className="mb-2">
@@ -76,8 +83,8 @@ export default async function AdminPage() {
   );
 }
 
-function StatusCard({ title, tone, snap, count }: { title: string; tone: 'amber' | 'sky'; snap: Snap; count: string | null }) {
-  const ring = tone === 'amber' ? 'border-amber-900/50' : 'border-sky-900/50';
+function StatusCard({ title, tone, snap, count }: { title: string; tone: 'amber' | 'sky' | 'emerald' | 'violet'; snap: Snap; count: string | null }) {
+  const ring = tone === 'amber' ? 'border-amber-900/50' : tone === 'sky' ? 'border-sky-900/50' : tone === 'emerald' ? 'border-emerald-900/50' : 'border-violet-900/50';
   return (
     <div className={`bg-zinc-900/60 border ${ring} rounded-2xl p-4`}>
       <div className="flex items-center gap-2 mb-2">

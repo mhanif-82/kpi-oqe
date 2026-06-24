@@ -2,11 +2,12 @@
 import { useEffect, useState } from 'react';
 
 const KEY = 'rmDashSettings';
-const DEFAULTS = { transitionSec: 15, scrollSpeed: 40 };
+const DEFAULTS = { transitionSec: 15, scrollSpeed: 40, coachingThreshold: 97 };
 
 export default function DisplaySettings() {
   const [transitionSec, setTransitionSec] = useState(DEFAULTS.transitionSec);
   const [scrollSpeed, setScrollSpeed]     = useState(DEFAULTS.scrollSpeed);
+  const [coachingThreshold, setCoachingThreshold] = useState(DEFAULTS.coachingThreshold);
   const [saved, setSaved]                 = useState(false);
 
   useEffect(() => {
@@ -16,12 +17,13 @@ export default function DisplaySettings() {
         const p = JSON.parse(s);
         if (p.transitionMs) setTransitionSec(Math.round(p.transitionMs / 1000));
         if (p.scrollSpeed)  setScrollSpeed(p.scrollSpeed);
+        if (p.coachingThreshold) setCoachingThreshold(p.coachingThreshold);
       }
     } catch {}
   }, []);
 
   function save() {
-    const val = { transitionMs: transitionSec * 1000, scrollSpeed };
+    const val = { transitionMs: transitionSec * 1000, scrollSpeed, coachingThreshold };
     localStorage.setItem(KEY, JSON.stringify(val));
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
@@ -30,6 +32,7 @@ export default function DisplaySettings() {
   function reset() {
     setTransitionSec(DEFAULTS.transitionSec);
     setScrollSpeed(DEFAULTS.scrollSpeed);
+    setCoachingThreshold(DEFAULTS.coachingThreshold);
     localStorage.removeItem(KEY);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
@@ -75,6 +78,23 @@ export default function DisplaySettings() {
             <span className="text-amber-300 font-black text-sm w-16 text-right">{scrollSpeed} px/s</span>
           </div>
           <p className="text-[10px] text-zinc-600 mt-1">Kecepatan scroll otomatis tabel leaderboard (5–200 px/detik)</p>
+        </div>
+
+        {/* Coaching threshold */}
+        <div className="md:col-span-2">
+          <label className="text-[11px] uppercase tracking-wider text-zinc-500 font-semibold block mb-1">
+            Coaching threshold
+          </label>
+          <div className="flex items-center gap-3">
+            <input
+              type="range" min={80} max={100} step={0.5}
+              value={coachingThreshold}
+              onChange={e => setCoachingThreshold(Number(e.target.value))}
+              className="flex-1 accent-red-400"
+            />
+            <span className="text-red-300 font-black text-sm w-16 text-right">{coachingThreshold}%</span>
+          </div>
+          <p className="text-[10px] text-zinc-600 mt-1">Peserta dengan performance <b>di bawah</b> nilai ini masuk daftar coaching. Kalau semua peserta di atas threshold, halaman Worst/Coaching otomatis disembunyikan (tampil pesan positif).</p>
         </div>
       </div>
 

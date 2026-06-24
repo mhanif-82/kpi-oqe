@@ -8,8 +8,9 @@ const DEFAULT_SCROLL_SPEED  = 40; // px/sec
 const pct = (v: number) => (v * 100).toFixed(2) + '%';
 const initials = (n: string) => n.split(/\s+/).filter(Boolean).slice(0, 2).map(s => s[0]).join('').toUpperCase();
 
+const DEFAULT_COACHING_THRESHOLD = 97; // persen
 type KpiDef = { name: string; weight: number };
-type Settings = { transitionMs: number; scrollSpeed: number };
+type Settings = { transitionMs: number; scrollSpeed: number; coachingThreshold?: number };
 
 export default function Dashboard({ rows, period, uploadedAt }: {
   rows: KpiRow[]; kpiDefs: KpiDef[]; period: string | null; fileName?: string | null; uploadedAt?: string | null;
@@ -18,7 +19,7 @@ export default function Dashboard({ rows, period, uploadedAt }: {
   const [dir, setDir]       = useState<'right' | 'left'>('right');
   const [animKey, setAnimKey] = useState(0);
   const [paused, setPaused] = useState(false);
-  const [settings, setSettings] = useState<Settings>({ transitionMs: DEFAULT_TRANSITION_MS, scrollSpeed: DEFAULT_SCROLL_SPEED });
+  const [settings, setSettings] = useState<Settings>({ transitionMs: DEFAULT_TRANSITION_MS, scrollSpeed: DEFAULT_SCROLL_SPEED, coachingThreshold: DEFAULT_COACHING_THRESHOLD });
 
   // Load settings from localStorage
   useEffect(() => {
@@ -82,9 +83,16 @@ export default function Dashboard({ rows, period, uploadedAt }: {
     return (name: string) => name ? `Region ${order.indexOf(name) + 1 || '-'}` : '-';
   }, [rows]);
 
+  const threshold = (settings.coachingThreshold ?? DEFAULT_COACHING_THRESHOLD) / 100;
   const top5    = useMemo(() => [...rows].sort((a, b) => b.pencapaian - a.pencapaian).slice(0, 5), [rows]);
-  const worst5  = useMemo(() => [...rows].sort((a, b) => a.pencapaian - b.pencapaian).slice(0, 5), [rows]);
   const sorted  = useMemo(() => [...rows].sort((a, b) => b.pencapaian - a.pencapaian), [rows]);
+  const allPerfect = useMemo(() => rows.length > 0 && rows.every(r => r.pencapaian >= 0.9999), [rows]);
+  const perfect = useMemo(() => sorted.filter(r => r.pencapaian >= 0.9999), [sorted]);
+  // Kandidat coaching = yang DI BAWAH threshold; worst dulu; maks 5. Bawa rank asli.
+  const coaching = useMemo(() => {
+    const below = sorted.map((r, i) => ({ row: r, rank: i + 1 })).filter(x => x.row.pencapaian < threshold);
+    return below.slice(-5).reverse();
+  }, [sorted, threshold]);
 
   const regionGroups = useMemo(() => {
     const m = new Map<string, KpiRow[]>();
@@ -125,10 +133,10 @@ export default function Dashboard({ rows, period, uploadedAt }: {
       />
 
       <div key={animKey} className={dir === 'right' ? 'slide-right' : 'slide-left'} style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-        {page === 0 && <PageTop top5={top5} regionLabel={regionLabel} />}
-        {page === 1 && <PageCoaching worst5={worst5} regionLabel={regionLabel} totalCount={rows.length} />}
+        {page === 0 && <PageTop top5={top5} perfect={perfect} allPerfect={allPerfect} regionLabel={regionLabel} />}
+        {page === 1 && <PageCoaching items={coaching} regionLabel={regionLabel} thresholdPct={settings.coachingThreshold ?? DEFAULT_COACHING_THRESHOLD} />}
         {page === 2 && <PageRegional groups={regionGroups} />}
-        {page === 3 && <PageLeaderboard sorted={sorted} regionLabel={regionLabel} scrollSpeed={settings.scrollSpeed} onScrollDone={onLeaderboardDone} />}
+        {page === 3 && <PageLeaderboard sorted={sorted} regionLabel={regionLabel} scrollSpeed={settings.scrollSpeed} onScrollDone={onLeaderboardDone} allPerfect={allPerfect} threshold={threshold} />}
       </div>
     </div>
   );
@@ -193,7 +201,9 @@ function StatCard({ label, value, sub, tone }: { label: string; value: string; s
 }
 
 /* ─── Page 1: Top 5 Best (podium besar) ───────────────────────────────── */
-function PageTop({ top5, regionLabel }: { top5: KpiRow[]; regionLabel: (n: string) => string }) {
+function PageTop({ top5, perfect, allPerfect, regionLabel }: { top5: KpiRow[]; perfect: KpiRow[]; allPerfect: boolean; regionLabel: (n: string) => string }) {
+  // Kalau semua 100% atau yang 100% lebih banyak dari slot podium → list semua (tanpa ranking)
+  if (allPerfect || perfect.length > 5) return <BestPerfectList names={perfect.map(r => ({ name: r.name, sub: regionLabel(r.regional) }))} />;
   return (
     <div className="flex-1 min-h-0 flex flex-col">
       <div className="flex items-baseline gap-3 mb-4 shrink-0">
@@ -206,17 +216,55 @@ function PageTop({ top5, regionLabel }: { top5: KpiRow[]; regionLabel: (n: strin
   );
 }
 
-/* ─── Page 2: Top 5 Coaching (baris besar) ────────────────────────────── */
-function PageCoaching({ worst5, regionLabel, totalCount }: { worst5: KpiRow[]; regionLabel: (n: string) => string; totalCount: number }) {
+/* List semua peserta 100% — tanpa ranking, semua setara */
+function BestPerfectList({ names }: { names: { name: string; sub?: string }[] }) {
+  return (
+    <div className="flex-1 min-h-0 flex flex-col">
+      <h2 className="text-2xl md:text-3xl font-bold mb-1 flex items-center gap-2 flex-wrap">
+        🏆 Best Performance
+        <span className="text-sm md:text-base font-black tracking-widest px-3 py-1 rounded-full bg-gradient-to-r from-amber-400 to-yellow-300 text-amber-950">PERFECT 100%</span>
+      </h2>
+      <p className="text-base md:text-lg text-zinc-300 mb-4">🎉 {names.length} orang mencapai performance 100% periode ini!</p>
+      <div className="flex-1 min-h-0 overflow-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+          {names.map(n => (
+            <div key={n.name} className="rounded-xl border p-4 flex items-center gap-4" style={{ background: 'linear-gradient(135deg, rgba(245,158,11,0.18), rgba(120,53,15,0.30))', borderColor: 'rgba(251,191,36,0.4)' }}>
+              <div className="w-16 h-16 text-xl rounded-full flex items-center justify-center font-black text-white shrink-0" style={{ background: 'linear-gradient(135deg,#fcd34d,#f59e0b,#b45309)' }}>{initials(n.name)}</div>
+              <div className="min-w-0 flex-1">
+                <div className="font-bold text-xl md:text-2xl leading-tight">{n.name}</div>
+                {n.sub && <div className="text-sm md:text-base text-zinc-400 truncate">{n.sub}</div>}
+              </div>
+              <div className="text-2xl md:text-3xl font-black text-amber-300">100%</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Page 2: Coaching (di bawah threshold) ───────────────────────────── */
+function PageCoaching({ items, regionLabel, thresholdPct }: { items: { row: KpiRow; rank: number }[]; regionLabel: (n: string) => string; thresholdPct: number }) {
+  if (!items.length) return <CoachingEmpty />;
   return (
     <div className="flex-1 min-h-0 flex flex-col">
       <div className="flex items-baseline gap-3 mb-4 shrink-0">
-        <h2 className="text-2xl md:text-3xl font-bold flex items-center gap-2 text-red-400">⚠ Top 5 Terbawah <span className="animate-pulse">(warning!!)</span></h2>
-        <span className="text-base text-zinc-400">— area improvement spotlight</span>
+        <h2 className="text-2xl md:text-3xl font-bold flex items-center gap-2 text-red-400">⚠ Perlu Coaching <span className="animate-pulse">(warning!!)</span></h2>
+        <span className="text-base text-zinc-400">— di bawah {thresholdPct}%</span>
       </div>
-      <div className="flex-1 min-h-0 grid gap-3" style={{ gridTemplateRows: `repeat(${worst5.length}, minmax(0, 1fr))` }}>
-        {worst5.map((r, i) => <CoachRow key={r.name} rank={totalCount - i} row={r} regionLabel={regionLabel} severity={r.pencapaian < 0.95 ? 'high' : 'med'} />)}
+      <div className="flex-1 min-h-0 grid gap-3" style={{ gridTemplateRows: `repeat(${items.length}, minmax(0, 1fr))` }}>
+        {items.map(({ row, rank }) => <CoachRow key={row.name} rank={rank} row={row} regionLabel={regionLabel} severity={row.pencapaian < 0.95 ? 'high' : 'med'} />)}
       </div>
+    </div>
+  );
+}
+
+function CoachingEmpty() {
+  return (
+    <div className="flex-1 min-h-0 flex flex-col items-center justify-center text-center gap-4">
+      <div className="text-7xl md:text-8xl">🎉</div>
+      <h2 className="text-3xl md:text-5xl font-black text-emerald-300">Semua perform di atas target!</h2>
+      <p className="text-lg md:text-xl text-zinc-400 max-w-2xl">Tidak ada yang perlu coaching periode ini. Pertahankan! 🔥</p>
     </div>
   );
 }
@@ -436,20 +484,21 @@ function RegionalCard({ group: g, rank }: { group: { region: string; members: Kp
 }
 
 /* ─── Page 3: Leaderboard ─────────────────────────────────────────────── */
-function PageLeaderboard({ sorted, regionLabel, scrollSpeed, onScrollDone }: {
+function PageLeaderboard({ sorted, regionLabel, scrollSpeed, onScrollDone, allPerfect, threshold }: {
   sorted: KpiRow[]; regionLabel: (n: string) => string;
-  scrollSpeed: number; onScrollDone: () => void;
+  scrollSpeed: number; onScrollDone: () => void; allPerfect: boolean; threshold: number;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const total     = sorted.length;
   const medal     = (i: number) => i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '';
   const isBottom  = (i: number) => i >= total - 5;
   const rowTint   = (i: number, score: number) => {
+    if (allPerfect) return 'bg-gradient-to-r from-amber-500/10 via-transparent to-transparent border-l-4 border-amber-400/50';
     if (i === 0) return 'bg-gradient-to-r from-amber-500/15 via-transparent to-transparent border-l-4 border-amber-400';
     if (i === 1) return 'bg-gradient-to-r from-zinc-300/10 via-transparent to-transparent border-l-4 border-zinc-400';
     if (i === 2) return 'bg-gradient-to-r from-orange-500/10 via-transparent to-transparent border-l-4 border-orange-400';
-    if (isBottom(i)) return 'bg-gradient-to-r from-red-500/10 via-transparent to-transparent border-l-4 border-red-500/60';
-    return score < 0.95 ? 'border-l-4 border-amber-500/40' : 'border-l-4 border-transparent';
+    if (isBottom(i) && score < threshold) return 'bg-gradient-to-r from-red-500/10 via-transparent to-transparent border-l-4 border-red-500/60';
+    return score < threshold ? 'border-l-4 border-amber-500/40' : 'border-l-4 border-transparent';
   };
   const totalCls = (v: number) => v < 0.90 ? 'text-red-400' : v >= 0.95 ? 'text-emerald-400' : 'text-amber-400';
 
@@ -495,9 +544,17 @@ function PageLeaderboard({ sorted, regionLabel, scrollSpeed, onScrollDone }: {
 
   return (
     <section className="flex-1 flex flex-col min-h-0">
-      <h2 className="text-2xl md:text-3xl font-bold mb-4 flex items-center gap-2">
-        📊 Full Leaderboard <span className="text-base text-zinc-500 font-normal">— Hall of Fame</span>
+      <h2 className="text-2xl md:text-3xl font-bold mb-4 flex items-center gap-2 flex-wrap">
+        📊 Full Leaderboard
+        {allPerfect
+          ? <span className="text-sm md:text-base font-black tracking-widest px-3 py-1 rounded-full bg-gradient-to-r from-amber-400 to-yellow-300 text-amber-950">🏆 PERFECT PERFORMANCE (100%)</span>
+          : <span className="text-base text-zinc-500 font-normal">— Hall of Fame</span>}
       </h2>
+      {allPerfect && (
+        <div className="mb-3 rounded-xl border border-amber-400/30 bg-amber-400/10 px-5 py-3 text-amber-200 text-base md:text-lg font-semibold flex items-center gap-2">
+          🎉 Seluruh peserta mencapai KPI 100% pada periode ini.
+        </div>
+      )}
       <div ref={scrollRef} className="flex-1 overflow-auto rounded-xl border border-zinc-800" style={{ scrollBehavior: 'auto' }}>
         <table className="w-full">
           <thead className="sticky top-0 bg-zinc-900 z-10 text-sm md:text-base uppercase tracking-wider text-zinc-400">
@@ -524,7 +581,7 @@ function PageLeaderboard({ sorted, regionLabel, scrollSpeed, onScrollDone }: {
                     <div className="font-bold text-xl md:text-2xl flex items-center gap-3 flex-wrap">
                       {r.name}
                       {isPerfect && <span className="text-xs font-black tracking-widest px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-300 ring-1 ring-amber-400/40">⭐ PERFECT</span>}
-                      {isBottom(i) && !isPerfect && <span className="text-xs font-black tracking-widest px-2 py-0.5 rounded-full bg-red-500/20 text-red-300 ring-1 ring-red-500/40">⚠ WARNING</span>}
+                      {!allPerfect && isBottom(i) && !isPerfect && r.pencapaian < threshold && <span className="text-xs font-black tracking-widest px-2 py-0.5 rounded-full bg-red-500/20 text-red-300 ring-1 ring-red-500/40">⚠ WARNING</span>}
                     </div>
                   </td>
                   <td className="p-4 text-lg md:text-xl text-zinc-400">{regionLabel(r.regional)}</td>

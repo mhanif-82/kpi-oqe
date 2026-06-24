@@ -6,9 +6,24 @@ const MONTHS = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustu
 
 type Issue = { severity: 'error' | 'warning'; row: number | null; column: string | null; message: string };
 type Report = { ok: boolean; fatal: string | null; issues: Issue[]; rowsParsed: number; sheetName: string | null; kpiCount: number };
-type DataType = 'rm' | 'sourcing';
+type DataType = 'rm' | 'sourcing' | 'bso' | 'apm';
 
-export default function UploadForm({ hasRm, hasSourcing }: { hasRm?: boolean; hasSourcing?: boolean }) {
+const TYPE_META: Record<DataType, { label: string; icon: string; desc: string; template: string; hint: string; accent: string }> = {
+  rm:       { label: 'RM',       icon: '🏆', desc: 'Relationship Manager — dashboard /',                     template: '/Template_RM_Contoh.xlsx',       hint: 'Kolom: NO · EMPLOYEE NAME · AOM · REGIONAL · (KPI + BOBOT)… · PENCAPAIAN', accent: 'amber' },
+  sourcing: { label: 'Sourcing', icon: '🔎', desc: 'People Search + Central Sourcing Mgr — dashboard /ps',   template: '/Template_Sourcing_Contoh.xlsx', hint: 'Tiap tabel: NAMA · (KPI: ACTUAL/BOBOT/TARGET/ACH)… · TOTAL ACHIEVEMENT (2 sheet: CSM & ALL PEOPLE SEARCH).', accent: 'sky' },
+  bso:      { label: 'BSO',      icon: '🏢', desc: 'BSO — dashboard /bs',                                    template: '/Template_BSO_Contoh.xlsx',      hint: 'Kolom: EMPLOYEE NAME · APM · REGIONAL · (KPI: ACHIEVEMENT/ACH X BOBOT)… · PERFORMANCE.', accent: 'emerald' },
+  apm:      { label: 'APM',      icon: '🎖️', desc: 'APM — tampil di dashboard /bs',                          template: '/Template_APM_Contoh.xlsx',      hint: 'Kolom: EMPLOYEE NAME · REGIONAL · (KPI: ACHIEVEMENT/ACH X BOBOT)… · PERFORMANCE.', accent: 'violet' },
+};
+const ACCENT_SEL: Record<string, string> = {
+  amber: 'border-amber-400/60 bg-amber-400/10', sky: 'border-sky-400/60 bg-sky-400/10',
+  emerald: 'border-emerald-400/60 bg-emerald-400/10', violet: 'border-violet-400/60 bg-violet-400/10',
+};
+const ACCENT_BADGE: Record<string, string> = {
+  amber: 'bg-amber-400 text-amber-950', sky: 'bg-sky-400 text-sky-950',
+  emerald: 'bg-emerald-400 text-emerald-950', violet: 'bg-violet-400 text-violet-950',
+};
+
+export default function UploadForm({ hasRm, hasSourcing, hasBso, hasApm }: { hasRm?: boolean; hasSourcing?: boolean; hasBso?: boolean; hasApm?: boolean }) {
   const router = useRouter();
   const now = new Date();
   const [type, setType] = useState<DataType>('rm');
@@ -22,7 +37,9 @@ export default function UploadForm({ hasRm, hasSourcing }: { hasRm?: boolean; ha
   const [month, setMonth] = useState(now.getMonth());
   const [year, setYear] = useState(now.getFullYear());
 
-  const hasExisting = type === 'rm' ? hasRm : hasSourcing;
+  const existMap: Record<DataType, boolean | undefined> = { rm: hasRm, sourcing: hasSourcing, bso: hasBso, apm: hasApm };
+  const hasExisting = existMap[type];
+  const typeLabel = TYPE_META[type].label;
   const periodLabel = type === 'rm' ? 'Periode' : 'Bulan Closing';
 
   function pickFile(f: File | null | undefined) {
@@ -41,7 +58,7 @@ export default function UploadForm({ hasRm, hasSourcing }: { hasRm?: boolean; ha
     L.push('LOG VALIDASI UPLOAD — Performance Dashboard');
     L.push('='.repeat(52));
     L.push(`Tanggal  : ${new Date().toLocaleString('id-ID')}`);
-    L.push(`Tipe     : ${type === 'rm' ? 'RM' : 'Sourcing'}`);
+    L.push(`Tipe     : ${typeLabel}`);
     L.push(`File     : ${fileName}`);
     L.push(`Status   : ${status}`);
     L.push(`Ringkasan: ${errors.length} error, ${warns.length} peringatan`);
@@ -66,7 +83,7 @@ export default function UploadForm({ hasRm, hasSourcing }: { hasRm?: boolean; ha
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!file) return;
-    const label = type === 'rm' ? 'RM' : 'Sourcing';
+    const label = typeLabel;
     if (hasExisting && !confirm(`Data ${label} sebelumnya akan dihapus & diganti file ini. Data tipe lain TIDAK terpengaruh. Lanjutkan?`)) return;
     setBusy(true); setMsg(null); setIssues([]); setFatal(null);
 
@@ -105,34 +122,32 @@ export default function UploadForm({ hasRm, hasSourcing }: { hasRm?: boolean; ha
   const errorCount = issues.filter(i => i.severity === 'error').length;
   const warnCount = issues.filter(i => i.severity === 'warning').length;
   const hasLog = !!fatal || issues.length > 0;
-  const templateHref = type === 'rm' ? '/Template_RM_Contoh.xlsx' : '/Template_Sourcing_Contoh.xlsx';
+  const meta = TYPE_META[type];
+  const choose = (t: DataType) => { setType(t); setFile(null); setMsg(null); setIssues([]); setFatal(null); };
 
   return (
     <form onSubmit={submit}>
       {/* Pemilih tipe */}
-      <div className="grid grid-cols-2 gap-3 mb-4">
-        <button type="button" onClick={() => { setType('rm'); setFile(null); setMsg(null); setIssues([]); setFatal(null); }}
-          className={`rounded-xl border p-4 text-left transition ${type === 'rm' ? 'border-amber-400/60 bg-amber-400/10' : 'border-zinc-800 bg-zinc-900/60 hover:border-zinc-700'}`}>
-          <div className="text-lg font-bold flex items-center gap-2">🏆 RM {type === 'rm' && <span className="text-[10px] bg-amber-400 text-amber-950 px-2 py-0.5 rounded-full">DIPILIH</span>}</div>
-          <div className="text-xs text-zinc-500 mt-0.5">Relationship Manager — dashboard /</div>
-        </button>
-        <button type="button" onClick={() => { setType('sourcing'); setFile(null); setMsg(null); setIssues([]); setFatal(null); }}
-          className={`rounded-xl border p-4 text-left transition ${type === 'sourcing' ? 'border-sky-400/60 bg-sky-400/10' : 'border-zinc-800 bg-zinc-900/60 hover:border-zinc-700'}`}>
-          <div className="text-lg font-bold flex items-center gap-2">🔎 Sourcing {type === 'sourcing' && <span className="text-[10px] bg-sky-400 text-sky-950 px-2 py-0.5 rounded-full">DIPILIH</span>}</div>
-          <div className="text-xs text-zinc-500 mt-0.5">People Search + Central Sourcing Mgr — dashboard /ps</div>
-        </button>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+        {(Object.keys(TYPE_META) as DataType[]).map(t => {
+          const m = TYPE_META[t];
+          const sel = type === t;
+          return (
+            <button key={t} type="button" onClick={() => choose(t)}
+              className={`rounded-xl border p-4 text-left transition ${sel ? ACCENT_SEL[m.accent] : 'border-zinc-800 bg-zinc-900/60 hover:border-zinc-700'}`}>
+              <div className="text-lg font-bold flex items-center gap-2">{m.icon} {m.label} {sel && <span className={`text-[10px] px-2 py-0.5 rounded-full ${ACCENT_BADGE[m.accent]}`}>DIPILIH</span>}</div>
+              <div className="text-[11px] text-zinc-500 mt-0.5">{m.desc}</div>
+            </button>
+          );
+        })}
       </div>
 
       {/* Download template + panduan singkat sesuai tipe */}
       <div className="mb-4 flex items-center gap-3 flex-wrap bg-zinc-900/60 border border-zinc-800 rounded-xl p-3">
-        <a href={templateHref} download className="inline-flex items-center gap-2 bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/25 font-semibold text-sm px-4 py-2 rounded-lg transition">
-          ⬇ Download template contoh {type === 'rm' ? 'RM' : 'Sourcing'} (.xlsx)
+        <a href={meta.template} download className="inline-flex items-center gap-2 bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/25 font-semibold text-sm px-4 py-2 rounded-lg transition">
+          ⬇ Download template contoh {meta.label} (.xlsx)
         </a>
-        <span className="text-[11px] text-zinc-500">
-          {type === 'rm'
-            ? 'Kolom: NO · EMPLOYEE NAME · AOM · REGIONAL · (KPI + BOBOT)… · PENCAPAIAN'
-            : 'Tiap tabel: NAMA · (KPI: ACTUAL/BOBOT/TARGET/ACH)… · TOTAL ACHIEVEMENT. People Search & Central Sourcing Manager dalam 1 file.'}
-        </span>
+        <span className="text-[11px] text-zinc-500">{meta.hint}</span>
       </div>
 
       {/* Bulan & tahun */}
@@ -164,7 +179,7 @@ export default function UploadForm({ hasRm, hasSourcing }: { hasRm?: boolean; ha
         <input type="file" accept=".xlsx,.xls" className="hidden" onChange={e => pickFile(e.target.files?.[0])} />
         <div className="text-4xl mb-2">{file ? '📄' : '⬆'}</div>
         <div className="text-base font-bold tracking-wider text-zinc-200 mb-1">
-          {file ? 'FILE SIAP DIUPLOAD' : `PILIH ATAU DRAG FILE EXCEL (${type === 'rm' ? 'RM' : 'SOURCING'})`}
+          {file ? 'FILE SIAP DIUPLOAD' : `PILIH ATAU DRAG FILE EXCEL (${typeLabel.toUpperCase()})`}
         </div>
         {file ? (
           <div className="text-sm text-zinc-300 mt-2">
@@ -179,7 +194,7 @@ export default function UploadForm({ hasRm, hasSourcing }: { hasRm?: boolean; ha
       {file && (
         <div className="mt-4 flex items-center gap-2">
           <button disabled={busy} className="flex-1 bg-gradient-to-r from-amber-400 to-yellow-300 text-amber-950 font-black tracking-wider rounded-lg py-3 disabled:opacity-50 hover:brightness-110 transition">
-            {busy ? 'MEMVALIDASI & MEMPROSES...' : `⚡ UPLOAD & PUBLISH ${type === 'rm' ? 'RM' : 'SOURCING'}`}
+            {busy ? 'MEMVALIDASI & MEMPROSES...' : `⚡ UPLOAD & PUBLISH ${typeLabel.toUpperCase()}`}
           </button>
           <button type="button" onClick={() => { setFile(null); setMsg(null); setIssues([]); setFatal(null); }} className="bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-400 text-sm px-4 py-3 rounded-lg">
             Batal
@@ -187,7 +202,7 @@ export default function UploadForm({ hasRm, hasSourcing }: { hasRm?: boolean; ha
         </div>
       )}
 
-      <p className="text-[11px] text-zinc-500 mt-2">⚠ Upload <b>{type === 'rm' ? 'RM' : 'Sourcing'}</b> hanya mengganti data <b>{type === 'rm' ? 'RM' : 'Sourcing'}</b> — tipe lain tetap aman.</p>
+      <p className="text-[11px] text-zinc-500 mt-2">⚠ Upload <b>{typeLabel}</b> hanya mengganti data <b>{typeLabel}</b> — tipe lain tetap aman.</p>
 
       {msg && (
         <div className={`mt-4 text-sm rounded-lg px-4 py-3 border ${msg.ok ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300' : 'bg-red-500/10 border-red-500/30 text-red-300'}`}>
