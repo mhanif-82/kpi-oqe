@@ -202,8 +202,8 @@ function StatCard({ label, value, sub, tone }: { label: string; value: string; s
 
 /* ─── Page 1: Top 5 Best (podium besar) ───────────────────────────────── */
 function PageTop({ top5, perfect, allPerfect, regionLabel }: { top5: KpiRow[]; perfect: KpiRow[]; allPerfect: boolean; regionLabel: (n: string) => string }) {
-  // Kalau semua 100% atau yang 100% lebih banyak dari slot podium → list semua (tanpa ranking)
-  if (allPerfect || perfect.length > 5) return <BestPerfectList names={perfect.map(r => ({ name: r.name, sub: regionLabel(r.regional) }))} />;
+  // Kalau ada 2+ yang 100% → tidak ada juara tunggal, tampilkan list setara (tanpa ranking)
+  if (allPerfect || perfect.length >= 2) return <BestPerfectList names={perfect.map(r => ({ name: r.name, sub: regionLabel(r.regional) }))} />;
   return (
     <div className="flex-1 min-h-0 flex flex-col">
       <div className="flex items-baseline gap-3 mb-4 shrink-0">
@@ -490,10 +490,15 @@ function PageLeaderboard({ sorted, regionLabel, scrollSpeed, onScrollDone, allPe
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const total     = sorted.length;
+  // Semua 100% → tanpa ranking, urut nama A–Z (semua setara).
+  const list      = allPerfect ? [...sorted].sort((a, b) => a.name.localeCompare(b.name)) : sorted;
+  const anyPerfect = list.some(r => r.pencapaian >= 0.9999);
+  const PERFECT_TINT = 'bg-gradient-to-r from-amber-500/15 via-transparent to-transparent border-l-4 border-amber-400';
   const medal     = (i: number) => i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '';
   const isBottom  = (i: number) => i >= total - 5;
   const rowTint   = (i: number, score: number) => {
-    if (allPerfect) return 'bg-gradient-to-r from-amber-500/10 via-transparent to-transparent border-l-4 border-amber-400/50';
+    if (score >= 0.9999) return PERFECT_TINT;               // baris 100% → selalu gold (setara, tanpa peringkat)
+    if (anyPerfect) return score < threshold ? 'border-l-4 border-amber-500/40' : 'border-l-4 border-transparent';
     if (i === 0) return 'bg-gradient-to-r from-amber-500/15 via-transparent to-transparent border-l-4 border-amber-400';
     if (i === 1) return 'bg-gradient-to-r from-zinc-300/10 via-transparent to-transparent border-l-4 border-zinc-400';
     if (i === 2) return 'bg-gradient-to-r from-orange-500/10 via-transparent to-transparent border-l-4 border-orange-400';
@@ -559,7 +564,7 @@ function PageLeaderboard({ sorted, regionLabel, scrollSpeed, onScrollDone, allPe
         <table className="w-full">
           <thead className="sticky top-0 bg-zinc-900 z-10 text-sm md:text-base uppercase tracking-wider text-zinc-400">
             <tr>
-              <th className="p-4 text-center w-24">Rank</th>
+              <th className="p-4 text-center w-24">{allPerfect ? '' : 'Rank'}</th>
               <th className="p-4 text-left">Nama RM</th>
               <th className="p-4 text-left">Region</th>
               <th className="p-4 text-left">AOM</th>
@@ -567,15 +572,21 @@ function PageLeaderboard({ sorted, regionLabel, scrollSpeed, onScrollDone, allPe
             </tr>
           </thead>
           <tbody>
-            {sorted.map((r, i) => {
+            {list.map((r, i) => {
               const isPerfect = r.pencapaian >= 1;
               return (
                 <tr key={r.name} className={`border-t border-zinc-800/60 ${rowTint(i, r.pencapaian)}`}>
                   <td className="p-4 text-center">
-                    <div className="flex flex-col items-center leading-none">
-                      <span className="text-3xl md:text-4xl leading-none">{medal(i)}</span>
-                      <span className={`text-base md:text-lg font-black mt-1 ${i < 3 ? 'text-zinc-100' : 'text-zinc-500'}`}>#{i + 1}</span>
-                    </div>
+                    {r.pencapaian >= 0.9999 ? (
+                      <span className="text-3xl md:text-4xl leading-none">⭐</span>
+                    ) : anyPerfect ? (
+                      <span className="text-base md:text-lg font-black text-zinc-300">#{i + 1}</span>
+                    ) : (
+                      <div className="flex flex-col items-center leading-none">
+                        <span className="text-3xl md:text-4xl leading-none">{medal(i)}</span>
+                        <span className={`text-base md:text-lg font-black mt-1 ${i < 3 ? 'text-zinc-100' : 'text-zinc-500'}`}>#{i + 1}</span>
+                      </div>
+                    )}
                   </td>
                   <td className="p-4">
                     <div className="font-bold text-xl md:text-2xl flex items-center gap-3 flex-wrap">

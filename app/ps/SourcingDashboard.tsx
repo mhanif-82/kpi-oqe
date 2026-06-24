@@ -166,7 +166,7 @@ const PODIUM = {
 } as const;
 
 function PagePodium({ people, perfect, allPerfect }: { people: SPerson[]; perfect: SPerson[]; allPerfect: boolean }) {
-  if (allPerfect || perfect.length > 5) return <BestPerfectList names={perfect.map(p => ({ name: p.name, sub: p.unit }))} />;
+  if (allPerfect || perfect.length >= 2) return <BestPerfectList names={perfect.map(p => ({ name: p.name, sub: p.unit }))} />;
   const [r1, r2, r3, r4, r5] = people;
   return (
     <div className="flex-1 min-h-0 flex flex-col">
@@ -329,8 +329,11 @@ function PageLeaderboard({ ranked, scrollSpeed, onScrollDone, allPerfect }: { ra
   const total = ranked.length;
   const medal = (i: number) => i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '';
   const totalCls = (v: number) => v < 0.6 ? 'text-red-400' : v >= 0.8 ? 'text-emerald-400' : 'text-amber-400';
-  const rowTint = (i: number) => {
-    if (allPerfect) return 'bg-gradient-to-r from-amber-500/10 via-transparent to-transparent border-l-4 border-amber-400/50';
+  const list = allPerfect ? [...ranked].sort((a, b) => a.name.localeCompare(b.name)) : ranked;
+  const anyPerfect = list.some(p => p.total >= 0.9999);
+  const rowTint = (i: number, score: number) => {
+    if (score >= 0.9999) return 'bg-gradient-to-r from-amber-500/15 via-transparent to-transparent border-l-4 border-amber-400';
+    if (anyPerfect) return 'border-l-4 border-transparent';
     if (i === 0) return 'bg-gradient-to-r from-amber-500/15 via-transparent to-transparent border-l-4 border-amber-400';
     if (i === 1) return 'bg-gradient-to-r from-zinc-300/10 via-transparent to-transparent border-l-4 border-zinc-400';
     if (i === 2) return 'bg-gradient-to-r from-orange-500/10 via-transparent to-transparent border-l-4 border-orange-400';
@@ -374,7 +377,7 @@ function PageLeaderboard({ ranked, scrollSpeed, onScrollDone, allPerfect }: { ra
         <table className="w-full">
           <thead className="sticky top-0 bg-zinc-900 z-10 text-sm md:text-base uppercase tracking-wider text-zinc-400">
             <tr>
-              <th className="p-4 text-center w-24">Rank</th>
+              <th className="p-4 text-center w-24">{allPerfect ? '' : 'Rank'}</th>
               <th className="p-4 text-left">Nama</th>
               <th className="p-4 text-left">Central</th>
               <th className="p-4 text-left">Posisi</th>
@@ -382,13 +385,19 @@ function PageLeaderboard({ ranked, scrollSpeed, onScrollDone, allPerfect }: { ra
             </tr>
           </thead>
           <tbody>
-            {ranked.map((p, i) => (
-              <tr key={p.name} className={`border-t border-zinc-800/60 ${rowTint(i)}`}>
+            {list.map((p, i) => (
+              <tr key={p.name} className={`border-t border-zinc-800/60 ${rowTint(i, p.total)}`}>
                 <td className="p-4 text-center">
-                  <div className="flex flex-col items-center leading-none">
-                    <span className="text-3xl md:text-4xl leading-none">{medal(i)}</span>
-                    <span className={`text-base md:text-lg font-black mt-1 ${i < 3 ? 'text-zinc-100' : 'text-zinc-500'}`}>#{i + 1}</span>
-                  </div>
+                  {p.total >= 0.9999 ? (
+                    <span className="text-3xl md:text-4xl leading-none">⭐</span>
+                  ) : anyPerfect ? (
+                    <span className="text-base md:text-lg font-black text-zinc-300">#{i + 1}</span>
+                  ) : (
+                    <div className="flex flex-col items-center leading-none">
+                      <span className="text-3xl md:text-4xl leading-none">{medal(i)}</span>
+                      <span className={`text-base md:text-lg font-black mt-1 ${i < 3 ? 'text-zinc-100' : 'text-zinc-500'}`}>#{i + 1}</span>
+                    </div>
+                  )}
                 </td>
                 <td className="p-4 font-bold text-xl md:text-2xl">{p.name}</td>
                 <td className="p-4 text-lg md:text-xl text-zinc-400">{p.unit || '-'}</td>
