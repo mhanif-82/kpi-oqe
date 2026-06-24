@@ -37,6 +37,9 @@ Tabel `kpi_snapshots`: `id, type, period, file_name, uploaded_at, uploaded_by, d
 
 Parser otomatis: deteksi sheet/tabel (judul/nama sheet), jumlah KPI bebas, format persen `100.00%`/`95%`/`95,13%` semua terbaca, baris kosong/duplikat/grand-total diabaikan.
 
+### 4.1 Hub navigasi (`/link`)
+Halaman pintasan TV-friendly: kartu besar klik-able ke tiap dashboard (RM `/`, Sourcing `/ps`, BSO & APM `/bs`) + tautan Admin. Tujuannya supaya di TV tinggal klik, tidak perlu ngetik URL. Statik (tanpa fetch data), warna per tipe konsisten (amber/sky/emerald), gradient inline rgba (TV Samsung-safe).
+
 ## 5. Perilaku Dashboard (umum)
 - **Auto-rotate** antar halaman tiap N detik (default 15s, bisa diatur admin).
 - **Leaderboard auto-scroll**: halaman leaderboard tidak ikut timer — scroll pelan dari atas ke bawah, lalu lanjut ke halaman berikutnya. Pakai akumulator float (kompatibel browser TV Samsung yang membulatkan `scrollTop`).

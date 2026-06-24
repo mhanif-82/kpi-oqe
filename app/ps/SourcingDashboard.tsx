@@ -134,7 +134,7 @@ function Header({ period, stats, page, setPage, paused, setPaused, uploadedAt }:
           {['Best PS', 'Worst PS', 'Sourcing Mgr', 'Leaderboard'].map((t, i) => (
             <button key={t} onClick={() => setPage(i)} className={`px-3 py-1.5 rounded-md text-xs font-medium ${page === i ? 'bg-zinc-100 text-zinc-900' : 'bg-zinc-900 text-zinc-400 hover:bg-zinc-800'}`}>{t}</button>
           ))}
-          <a href="/" className="px-3 py-1.5 rounded-md text-xs font-medium bg-zinc-900 text-zinc-400 hover:bg-zinc-800">RM ↗</a>
+          <a href="/link" className="px-3 py-1.5 rounded-md text-xs font-medium bg-zinc-900 text-zinc-400 hover:bg-zinc-800">📺 Link</a>
           <button onClick={() => setPaused(!paused)} className="px-3 py-1.5 rounded-md text-xs font-medium bg-zinc-900 text-zinc-400 hover:bg-zinc-800">{paused ? '▶' : '⏸'}</button>
         </div>
       </div>
