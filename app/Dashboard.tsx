@@ -229,12 +229,12 @@ function BestPerfectList({ names }: { names: { name: string; sub?: string }[] })
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
           {names.map(n => (
             <div key={n.name} className="rounded-xl border p-4 flex items-center gap-4" style={{ background: 'linear-gradient(135deg, rgba(245,158,11,0.18), rgba(120,53,15,0.30))', borderColor: 'rgba(251,191,36,0.4)' }}>
-              <div className="w-16 h-16 text-xl rounded-full flex items-center justify-center font-black text-white shrink-0" style={{ background: 'linear-gradient(135deg,#fcd34d,#f59e0b,#b45309)' }}>{initials(n.name)}</div>
+              <div className="w-20 h-20 text-2xl rounded-full flex items-center justify-center font-black text-white shrink-0" style={{ background: 'linear-gradient(135deg,#fcd34d,#f59e0b,#b45309)' }}>{initials(n.name)}</div>
               <div className="min-w-0 flex-1">
-                <div className="font-bold text-xl md:text-2xl leading-tight">{n.name}</div>
-                {n.sub && <div className="text-sm md:text-base text-zinc-400 truncate">{n.sub}</div>}
+                <div className="font-bold text-2xl md:text-3xl leading-tight">{n.name}</div>
+                {n.sub && <div className="text-base md:text-lg text-zinc-400 truncate">{n.sub}</div>}
               </div>
-              <div className="text-2xl md:text-3xl font-black text-amber-300">100%</div>
+              <div className="text-3xl md:text-4xl font-black text-amber-300">100%</div>
             </div>
           ))}
         </div>
@@ -330,7 +330,7 @@ function PodiumCard({ rank, row, regionLabel }: { rank: 1 | 2 | 3; row: KpiRow; 
            style={{ background: s.avatarBg }}>
         {initials(row.name)}
       </div>
-      <div className={`font-bold ${big ? 'text-2xl md:text-3xl' : 'text-xl md:text-2xl'} leading-tight`}>{row.name}</div>
+      <div className={`font-bold ${big ? 'text-xl md:text-2xl' : 'text-lg md:text-xl'} leading-tight`}>{row.name}</div>
       <div className="text-sm md:text-base text-zinc-400">{regionLabel(row.regional)}</div>
       <div className={`${big ? 'text-4xl md:text-5xl' : 'text-3xl md:text-4xl'} font-black`} style={{ color: s.text }}>{pct(row.pencapaian)}</div>
       {isPerfect && (
@@ -349,7 +349,7 @@ function MinorCard({ rank, row, regionLabel }: { rank: number; row: KpiRow; regi
       <div className="text-sm font-bold text-zinc-500 w-10 text-center leading-tight">#<span className="text-2xl text-zinc-200">{rank}</span></div>
       <div className="w-14 h-14 rounded-full bg-zinc-700 flex items-center justify-center text-lg font-bold text-white shrink-0">{initials(row.name)}</div>
       <div className="flex-1 min-w-0">
-        <div className="font-bold text-xl md:text-2xl truncate">{row.name}</div>
+        <div className="font-bold text-lg md:text-xl truncate">{row.name}</div>
         <div className="text-sm md:text-base text-zinc-500 truncate">{regionLabel(row.regional)}</div>
       </div>
       <div className="text-right">
