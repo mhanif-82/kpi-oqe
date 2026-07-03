@@ -719,6 +719,11 @@ function PageRegReport({ region, scrollSpeed, transitionMs, onScrollDone }: {
       ? { background: 'linear-gradient(90deg, rgba(245,158,11,0.14), rgba(245,158,11,0.02))', borderLeft: '4px solid #f59e0b' }
       : { background: 'linear-gradient(90deg, rgba(239,68,68,0.16), rgba(239,68,68,0.02))', borderLeft: '4px solid #ef4444' };
 
+  // Highlight full-row untuk baris klien yang kuning (<90%) / merah (<70%); hijau polos.
+  const rowTint = (v: number): React.CSSProperties | undefined => v >= 0.9 ? undefined : v >= 0.7
+    ? { background: 'linear-gradient(90deg, rgba(245,158,11,0.30), rgba(245,158,11,0.10))', borderLeft: '4px solid #f59e0b' }
+    : { background: 'linear-gradient(90deg, rgba(239,68,68,0.34), rgba(239,68,68,0.12))', borderLeft: '4px solid #ef4444' };
+
   const th = 'p-3 text-center font-semibold';
   const td = 'p-3 text-center text-lg md:text-xl';
 
@@ -752,7 +757,7 @@ function PageRegReport({ region, scrollSpeed, transitionMs, onScrollDone }: {
           </thead>
           <tbody>
             {groups.map((g, gi) => (
-              <FragmentRows key={g.rm} g={g} gi={gi} slaCls={slaCls} groupTint={groupTint} td={td} />
+              <FragmentRows key={g.rm} g={g} gi={gi} slaCls={slaCls} groupTint={groupTint} rowTint={rowTint} td={td} />
             ))}
           </tbody>
         </table>
@@ -769,10 +774,11 @@ type RegGroup = {
   pctFulfill: number; pctSla: number;
 };
 
-function FragmentRows({ g, gi, slaCls, groupTint, td }: {
+function FragmentRows({ g, gi, slaCls, groupTint, rowTint, td }: {
   g: RegGroup; gi: number;
   slaCls: (v: number) => string;
   groupTint: (v: number) => React.CSSProperties;
+  rowTint: (v: number) => React.CSSProperties | undefined;
   td: string;
 }) {
   return (
@@ -797,25 +803,29 @@ function FragmentRows({ g, gi, slaCls, groupTint, td }: {
         <td className={td}>{g.slaClose}</td>
         <td className={`p-3 text-center font-black text-3xl md:text-4xl ${slaCls(g.pctSla)}`}>{(g.pctSla * 100).toFixed(0)}%</td>
       </tr>
-      {g.rows.map(r => (
-        <tr key={g.rm + r.klien} className="border-t border-zinc-800/60">
-          <td className="p-3 pl-10 text-left text-lg md:text-xl text-zinc-300">{r.klien}</td>
-          <td className={td}>{r.ro}</td>
-          <td className={td}>{r.fulfill}</td>
-          <td className={td}>{r.unfulfill}</td>
-          <td className={`${td} text-zinc-400`}>{(r.pctFulfill * 100).toFixed(0)}%</td>
-          <td className={td}>{r.close}</td>
-          <td className={`${td} text-zinc-400`}>{(r.pctClose * 100).toFixed(0)}%</td>
-          <td className={`${td} border-l border-zinc-800/60`}>{r.fOn}</td>
-          <td className={td}>{r.fOver}</td>
-          <td className={`${td} border-l border-zinc-800/60`}>{r.uOn}</td>
-          <td className={td}>{r.uOver}</td>
-          <td className={`${td} border-l border-zinc-800/60`}>{r.slaOn}</td>
-          <td className={td}>{r.slaOver}</td>
-          <td className={td}>{r.slaClose}</td>
-          <td className={`p-3 text-center font-bold text-xl md:text-2xl border-l border-zinc-800/60 ${slaCls(r.pctSla)}`}>{(r.pctSla * 100).toFixed(0)}%</td>
+      {g.rows.map(r => {
+        const flag = r.pctSla < 0.9; // kuning/merah → teks bold & terang
+        const tdR = flag ? `${td} font-bold text-zinc-50` : td;
+        return (
+        <tr key={g.rm + r.klien} className="border-t border-zinc-800/60" style={rowTint(r.pctSla)}>
+          <td className={`p-3 pl-10 text-left text-lg md:text-xl ${flag ? 'font-bold text-zinc-50' : 'text-zinc-300'}`}>{r.klien}</td>
+          <td className={tdR}>{r.ro}</td>
+          <td className={tdR}>{r.fulfill}</td>
+          <td className={tdR}>{r.unfulfill}</td>
+          <td className={`${tdR} ${flag ? '' : 'text-zinc-400'}`}>{(r.pctFulfill * 100).toFixed(0)}%</td>
+          <td className={tdR}>{r.close}</td>
+          <td className={`${tdR} ${flag ? '' : 'text-zinc-400'}`}>{(r.pctClose * 100).toFixed(0)}%</td>
+          <td className={`${tdR} border-l border-zinc-800/60`}>{r.fOn}</td>
+          <td className={tdR}>{r.fOver}</td>
+          <td className={`${tdR} border-l border-zinc-800/60`}>{r.uOn}</td>
+          <td className={tdR}>{r.uOver}</td>
+          <td className={`${tdR} border-l border-zinc-800/60`}>{r.slaOn}</td>
+          <td className={tdR}>{r.slaOver}</td>
+          <td className={tdR}>{r.slaClose}</td>
+          <td className={`p-3 text-center text-xl md:text-2xl border-l border-zinc-800/60 ${flag ? 'font-black' : 'font-bold'} ${slaCls(r.pctSla)}`}>{(r.pctSla * 100).toFixed(0)}%</td>
         </tr>
-      ))}
+        );
+      })}
     </>
   );
 }
