@@ -1,6 +1,7 @@
 'use client';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { KpiRow } from '@/lib/parse-kpi';
+import type { FulfillmentData, FulfillRegion, FulfillRow, FulfillmentInfo } from '@/lib/parse-fulfillment';
 
 const DEFAULT_TRANSITION_MS = 15000;
 const DEFAULT_SCROLL_SPEED  = 40; // px/sec
@@ -12,9 +13,12 @@ const DEFAULT_COACHING_THRESHOLD = 97; // persen
 type KpiDef = { name: string; weight: number };
 type Settings = { transitionMs: number; scrollSpeed: number; coachingThreshold?: number };
 
-export default function Dashboard({ rows, period, uploadedAt }: {
+export default function Dashboard({ rows, period, uploadedAt, fulfillment }: {
   rows: KpiRow[]; kpiDefs: KpiDef[]; period: string | null; fileName?: string | null; uploadedAt?: string | null;
+  fulfillment?: FulfillmentData | null;
 }) {
+  const regs = useMemo(() => (fulfillment?.regions ?? []).filter(r => r.rows.length), [fulfillment]);
+  const pageCount = 4 + regs.length; // 0-2 KPI · 3..(2+n) Report SO & Usulan per regional · terakhir leaderboard
   const [page, setPage]     = useState(0);
   const [dir, setDir]       = useState<'right' | 'left'>('right');
   const [animKey, setAnimKey] = useState(0);
@@ -39,13 +43,13 @@ export default function Dashboard({ rows, period, uploadedAt }: {
 
   const navigate = useCallback((delta: 1 | -1) => {
     setDir(delta === 1 ? 'right' : 'left');
-    setPage(p => (p + delta + 4) % 4);
+    setPage(p => (p + delta + pageCount) % pageCount);
     setAnimKey(k => k + 1);
-  }, []);
+  }, [pageCount]);
 
-  // Auto-rotate — skip leaderboard page (scroll handles its transition)
+  // Auto-rotate — halaman >= 3 (Report SO & leaderboard) maju sendiri lewat auto-scroll
   useEffect(() => {
-    if (paused || page === 3) return;
+    if (paused || page >= 3) return;
     const t = setInterval(() => navigate(1), settings.transitionMs);
     return () => clearInterval(t);
   }, [paused, page, settings.transitionMs, navigate]);
@@ -130,6 +134,10 @@ export default function Dashboard({ rows, period, uploadedAt }: {
         period={period} stats={stats}
         page={page} setPage={setPageManual} paused={paused} setPaused={setPaused}
         uploadedAt={uploadedAt}
+        regIdx={page >= 4 && page < 4 + regs.length ? page - 4 : null}
+        regHead={page >= 4 && page < 4 + regs.length ? regs[page - 4].head : null}
+        info={fulfillment?.info ?? null}
+        regCount={regs.length}
       />
 
       <div key={animKey} className={dir === 'right' ? 'slide-right' : 'slide-left'} style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
@@ -137,37 +145,55 @@ export default function Dashboard({ rows, period, uploadedAt }: {
         {page === 1 && <PageCoaching items={coaching} regionLabel={regionLabel} thresholdPct={settings.coachingThreshold ?? DEFAULT_COACHING_THRESHOLD} />}
         {page === 2 && <PageRegional groups={regionGroups} />}
         {page === 3 && <PageLeaderboard sorted={sorted} regionLabel={regionLabel} scrollSpeed={settings.scrollSpeed} onScrollDone={onLeaderboardDone} allPerfect={allPerfect} threshold={threshold} />}
+        {page >= 4 && page < 4 + regs.length && (
+          <PageRegReport key={page} idx={page - 4} region={regs[page - 4]}
+            scrollSpeed={settings.scrollSpeed} transitionMs={settings.transitionMs} onScrollDone={onLeaderboardDone} />
+        )}
       </div>
     </div>
   );
 }
 
 /* ─── Header ──────────────────────────────────────────────────────────── */
-function Header({ period, stats, page, setPage, paused, setPaused, uploadedAt }: {
+function Header({ period, stats, page, setPage, paused, setPaused, uploadedAt, regIdx, regHead, info, regCount }: {
   period: string | null; stats: { total: number; avg: number; ok: number; focus: number };
   page: number; setPage: (p: number) => void; paused: boolean; setPaused: (v: boolean) => void;
   uploadedAt?: string | null;
+  regIdx: number | null; regHead: string | null; info: FulfillmentInfo | null; regCount: number;
 }) {
+  const isReg = regIdx !== null;
+  const tabs = ['Top 5 Best', 'Top 5 Worst', 'Regional', 'Leaderboard', ...Array.from({ length: regCount }, (_, i) => `SO Reg ${i + 1}`)];
   return (
     <header className="flex flex-col gap-4">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-3xl md:text-4xl font-bold tracking-tight flex items-center gap-3 flex-wrap">
-            <span>🏆</span> RM Performance Dashboard
-            {period && (
-              <span className="text-base md:text-lg font-bold tracking-wider px-3 py-1 rounded-full bg-amber-400/15 text-amber-300 ring-1 ring-amber-400/40">
-                📅 {period}
-              </span>
-            )}
-          </h1>
-          {uploadedAt && (
+          {isReg ? (
+            <h1 className="text-3xl md:text-4xl font-bold tracking-tight flex items-center gap-3 flex-wrap">
+              <span>📋</span> Report SO &amp; Usulan — Regional {regIdx! + 1}
+              {regHead && (
+                <span className="text-base md:text-lg font-bold tracking-wider px-3 py-1 rounded-full bg-rose-400/15 text-rose-300 ring-1 ring-rose-400/40">
+                  👤 {regHead}
+                </span>
+              )}
+            </h1>
+          ) : (
+            <h1 className="text-3xl md:text-4xl font-bold tracking-tight flex items-center gap-3 flex-wrap">
+              <span>🏆</span> RM Performance Dashboard
+              {period && (
+                <span className="text-base md:text-lg font-bold tracking-wider px-3 py-1 rounded-full bg-amber-400/15 text-amber-300 ring-1 ring-amber-400/40">
+                  📅 {period}
+                </span>
+              )}
+            </h1>
+          )}
+          {!isReg && uploadedAt && (
             <p className="text-sm md:text-base text-zinc-300 mt-1.5">
               🕒 Last Updated: <span className="font-semibold text-zinc-100">{new Date(uploadedAt).toLocaleString('id-ID')}</span>
             </p>
           )}
         </div>
-        <div className="flex items-center gap-2">
-          {['Top 5 Best', 'Top 5 Worst', 'Regional', 'Leaderboard'].map((t, i) => (
+        <div className="flex items-center gap-2 flex-wrap justify-end">
+          {tabs.map((t, i) => (
             <button key={t} onClick={() => setPage(i)} className={`px-3 py-1.5 rounded-md text-xs font-medium ${page === i ? 'bg-zinc-100 text-zinc-900' : 'bg-zinc-900 text-zinc-400 hover:bg-zinc-800'}`}>{t}</button>
           ))}
           <a href="/link" className="px-3 py-1.5 rounded-md text-xs font-medium bg-zinc-900 text-zinc-400 hover:bg-zinc-800">📺 Link</a>
@@ -177,23 +203,31 @@ function Header({ period, stats, page, setPage, paused, setPaused, uploadedAt }:
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <StatCard label="Total RM" value={String(stats.total)} />
-        <StatCard label="Rata-rata performance" value={pct(stats.avg)} />
-        <StatCard label="Performance ≥ 95% (aman)" value={String(stats.ok)} sub={`(${Math.round(stats.ok / stats.total * 100)}%)`} tone="good" />
-        <StatCard label="Performance < 95% (perlu perhatian)" value={String(stats.focus)} sub={`(${Math.round(stats.focus / stats.total * 100)}%)`} tone="warn" />
-      </div>
+      {isReg ? (
+        <div className="grid grid-cols-3 gap-3">
+          <StatCard label="Periode" value={info?.periode ?? '-'} small />
+          <StatCard label="Tgl Release" value={info?.tglRelease ?? '-'} small />
+          <StatCard label="Cut Off Closing" value={info?.cutOff ?? '-'} small tone="warn" />
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <StatCard label="Total RM" value={String(stats.total)} />
+          <StatCard label="Rata-rata performance" value={pct(stats.avg)} />
+          <StatCard label="Performance ≥ 95% (aman)" value={String(stats.ok)} sub={`(${Math.round(stats.ok / stats.total * 100)}%)`} tone="good" />
+          <StatCard label="Performance < 95% (perlu perhatian)" value={String(stats.focus)} sub={`(${Math.round(stats.focus / stats.total * 100)}%)`} tone="warn" />
+        </div>
+      )}
     </header>
   );
 }
 
-function StatCard({ label, value, sub, tone }: { label: string; value: string; sub?: string; tone?: 'good' | 'warn' }) {
+function StatCard({ label, value, sub, tone, small }: { label: string; value: string; sub?: string; tone?: 'good' | 'warn'; small?: boolean }) {
   const cls = tone === 'good' ? 'bg-emerald-950/40 border-emerald-900/60' : tone === 'warn' ? 'bg-amber-950/40 border-amber-900/60' : 'bg-zinc-900/60 border-zinc-800';
   const labelCls = tone === 'good' ? 'text-emerald-400' : tone === 'warn' ? 'text-amber-400' : 'text-zinc-400';
   return (
     <div className={`rounded-xl border p-4 ${cls}`}>
       <div className={`text-xs font-medium ${labelCls}`}>{label}</div>
-      <div className="text-2xl md:text-3xl font-bold mt-2 flex items-baseline gap-2">
+      <div className={`${small ? 'text-lg md:text-xl' : 'text-2xl md:text-3xl'} font-bold mt-2 flex items-baseline gap-2`}>
         {value}
         {sub && <span className="text-sm font-normal text-zinc-500">{sub}</span>}
       </div>
@@ -606,5 +640,183 @@ function PageLeaderboard({ sorted, regionLabel, scrollSpeed, onScrollDone, allPe
         </table>
       </div>
     </section>
+  );
+}
+
+/* ─── Report SO & Usulan per regional (dari upload Fulfillment) ───────── */
+/* Grup per RM, diurut dari % PERFORM SLA terjelek → terbagus; auto-scroll lalu lanjut slide. */
+function PageRegReport({ idx, region, scrollSpeed, transitionMs, onScrollDone }: {
+  idx: number; region: FulfillRegion; scrollSpeed: number; transitionMs: number; onScrollDone: () => void;
+}) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const groups = useMemo(() => {
+    const m = new Map<string, { aom: string; rows: FulfillRow[] }>();
+    region.rows.forEach(r => {
+      const g = m.get(r.rm) ?? { aom: r.aom, rows: [] };
+      g.rows.push(r);
+      m.set(r.rm, g);
+    });
+    return [...m.entries()]
+      .map(([rm, g]) => {
+        const sum = (f: (r: FulfillRow) => number) => g.rows.reduce((s, r) => s + f(r), 0);
+        const slaOn = sum(r => r.slaOn), slaOver = sum(r => r.slaOver);
+        const ro = sum(r => r.ro), fulfill = sum(r => r.fulfill);
+        return {
+          rm, aom: g.aom,
+          rows: [...g.rows].sort((a, b) => a.pctSla - b.pctSla),
+          ro, fulfill, unfulfill: sum(r => r.unfulfill), close: sum(r => r.close),
+          fOn: sum(r => r.fOn), fOver: sum(r => r.fOver), uOn: sum(r => r.uOn), uOver: sum(r => r.uOver),
+          slaOn, slaOver, slaClose: sum(r => r.slaClose),
+          pctFulfill: ro ? fulfill / ro : 0,
+          pctSla: slaOn + slaOver ? slaOn / (slaOn + slaOver) : 0,
+        };
+      })
+      .sort((a, b) => a.pctSla - b.pctSla); // terjelek dulu
+  }, [region]);
+
+  // Auto-scroll (pola sama dengan leaderboard); kalau muat tanpa scroll → tunggu transitionMs
+  const doneRef = useRef(false);
+  useEffect(() => {
+    doneRef.current = false;
+    const el = scrollRef.current;
+    if (!el) return;
+    el.scrollTop = 0;
+
+    const maxScroll = el.scrollHeight - el.clientHeight;
+    if (maxScroll <= 2 || scrollSpeed <= 0) {
+      const t = setTimeout(onScrollDone, transitionMs);
+      return () => clearTimeout(t);
+    }
+
+    let pos = 0; // akumulator float — browser TV membulatkan scrollTop
+    let lastTime: number | null = null;
+    let raf: number;
+    function step(ts: number) {
+      if (doneRef.current) return;
+      if (lastTime !== null) {
+        pos += (scrollSpeed * (ts - lastTime)) / 1000;
+        el!.scrollTop = pos;
+        if (pos >= el!.scrollHeight - el!.clientHeight - 2) {
+          doneRef.current = true;
+          setTimeout(onScrollDone, 1200);
+          return;
+        }
+      }
+      lastTime = ts;
+      raf = requestAnimationFrame(step);
+    }
+    const startTimer = setTimeout(() => { raf = requestAnimationFrame(step); }, 600);
+    return () => { doneRef.current = true; clearTimeout(startTimer); cancelAnimationFrame(raf); };
+  }, [scrollSpeed, transitionMs, onScrollDone, groups]);
+
+  const slaCls = (v: number) => v >= 0.9 ? 'text-emerald-400' : v >= 0.7 ? 'text-amber-400' : 'text-red-400';
+  const groupTint = (v: number) => v >= 0.9
+    ? { background: 'linear-gradient(90deg, rgba(16,185,129,0.14), rgba(16,185,129,0.02))', borderLeft: '4px solid #10b981' }
+    : v >= 0.7
+      ? { background: 'linear-gradient(90deg, rgba(245,158,11,0.14), rgba(245,158,11,0.02))', borderLeft: '4px solid #f59e0b' }
+      : { background: 'linear-gradient(90deg, rgba(239,68,68,0.16), rgba(239,68,68,0.02))', borderLeft: '4px solid #ef4444' };
+
+  const th = 'p-2.5 text-center font-semibold';
+  const td = 'p-2.5 text-center text-base md:text-lg';
+
+  return (
+    <section className="flex-1 flex flex-col min-h-0">
+      <h2 className="text-2xl md:text-3xl font-bold mb-4 flex items-center gap-3 flex-wrap">
+        📋 Report SO &amp; Usulan — Regional {idx + 1}
+        <span className="text-base text-zinc-500 font-normal">— urut % Perform SLA terendah</span>
+      </h2>
+      <div ref={scrollRef} className="flex-1 overflow-auto rounded-xl border border-zinc-800" style={{ scrollBehavior: 'auto' }}>
+        <table className="w-full">
+          <thead className="sticky top-0 bg-zinc-900 z-10 text-xs md:text-sm uppercase tracking-wider text-zinc-400">
+            <tr>
+              <th className="p-2.5 text-left" rowSpan={2}>Nama Klien</th>
+              <th className={th} rowSpan={2}>Recruitment<br />Order</th>
+              <th className={th} rowSpan={2}>Fulfill</th>
+              <th className={th} rowSpan={2}>Unfulfill</th>
+              <th className={th} rowSpan={2}>% Fulfill</th>
+              <th className={th} rowSpan={2}>Close</th>
+              <th className={th} rowSpan={2}>% Close</th>
+              <th className={`${th} border-l border-zinc-800`} colSpan={2}>Fulfill</th>
+              <th className={`${th} border-l border-zinc-800`} colSpan={2}>Unfulfill</th>
+              <th className={`${th} border-l border-zinc-800`} colSpan={3}>Status SLA</th>
+              <th className={`${th} border-l border-zinc-800`} rowSpan={2}>% Perform<br />SLA</th>
+            </tr>
+            <tr>
+              <th className={`${th} border-l border-zinc-800`}>On SLA</th>
+              <th className={th}>Over SLA</th>
+              <th className={`${th} border-l border-zinc-800`}>On SLA</th>
+              <th className={th}>Over SLA</th>
+              <th className={`${th} border-l border-zinc-800`}>On SLA</th>
+              <th className={th}>Over SLA</th>
+              <th className={th}>Close</th>
+            </tr>
+          </thead>
+          <tbody>
+            {groups.map((g, gi) => (
+              <FragmentRows key={g.rm} g={g} gi={gi} slaCls={slaCls} groupTint={groupTint} td={td} />
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
+
+type RegGroup = {
+  rm: string; aom: string; rows: FulfillRow[];
+  ro: number; fulfill: number; unfulfill: number; close: number;
+  fOn: number; fOver: number; uOn: number; uOver: number;
+  slaOn: number; slaOver: number; slaClose: number;
+  pctFulfill: number; pctSla: number;
+};
+
+function FragmentRows({ g, gi, slaCls, groupTint, td }: {
+  g: RegGroup; gi: number;
+  slaCls: (v: number) => string;
+  groupTint: (v: number) => React.CSSProperties;
+  td: string;
+}) {
+  return (
+    <>
+      {/* Baris grup: RM + agregat */}
+      <tr className="border-t-2 border-zinc-700" style={groupTint(g.pctSla)}>
+        <td className="p-3" colSpan={7}>
+          <div className="flex items-center gap-3 flex-wrap">
+            <span className="text-sm font-black text-zinc-500">#{gi + 1}</span>
+            <span className="font-black text-xl md:text-2xl">{g.rm}</span>
+            <span className="text-sm text-zinc-400">AOM: {g.aom || '-'}</span>
+            <span className="text-sm text-zinc-500">RO {g.ro} · Fulfill {g.fulfill} · Unfulfill {g.unfulfill}</span>
+          </div>
+        </td>
+        <td className={td}>{g.fOn}</td>
+        <td className={td}>{g.fOver}</td>
+        <td className={td}>{g.uOn}</td>
+        <td className={td}>{g.uOver}</td>
+        <td className={td}>{g.slaOn}</td>
+        <td className={td}>{g.slaOver}</td>
+        <td className={td}>{g.slaClose}</td>
+        <td className={`p-2.5 text-center font-black text-2xl md:text-3xl ${slaCls(g.pctSla)}`}>{(g.pctSla * 100).toFixed(0)}%</td>
+      </tr>
+      {g.rows.map(r => (
+        <tr key={g.rm + r.klien} className="border-t border-zinc-800/60">
+          <td className="p-2.5 pl-10 text-left text-base md:text-lg text-zinc-300">{r.klien}</td>
+          <td className={td}>{r.ro}</td>
+          <td className={td}>{r.fulfill}</td>
+          <td className={td}>{r.unfulfill}</td>
+          <td className={`${td} text-zinc-400`}>{(r.pctFulfill * 100).toFixed(0)}%</td>
+          <td className={td}>{r.close}</td>
+          <td className={`${td} text-zinc-400`}>{(r.pctClose * 100).toFixed(0)}%</td>
+          <td className={`${td} border-l border-zinc-800/60`}>{r.fOn}</td>
+          <td className={td}>{r.fOver}</td>
+          <td className={`${td} border-l border-zinc-800/60`}>{r.uOn}</td>
+          <td className={td}>{r.uOver}</td>
+          <td className={`${td} border-l border-zinc-800/60`}>{r.slaOn}</td>
+          <td className={td}>{r.slaOver}</td>
+          <td className={td}>{r.slaClose}</td>
+          <td className={`p-2.5 text-center font-bold text-lg md:text-xl border-l border-zinc-800/60 ${slaCls(r.pctSla)}`}>{(r.pctSla * 100).toFixed(0)}%</td>
+        </tr>
+      ))}
+    </>
   );
 }

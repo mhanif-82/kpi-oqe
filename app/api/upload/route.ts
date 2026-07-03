@@ -3,8 +3,9 @@ import { createClient } from '@/lib/supabase/server';
 import { parseExcel, validateExcel } from '@/lib/parse-kpi';
 import { parseSourcing, validateSourcing } from '@/lib/parse-sourcing';
 import { parseBsoApm, validateBsoApm } from '@/lib/parse-bso';
+import { parseFulfillment, validateFulfillment } from '@/lib/parse-fulfillment';
 
-const TYPES = ['rm', 'sourcing', 'bso', 'apm'] as const;
+const TYPES = ['rm', 'sourcing', 'bso', 'apm', 'fulfillment'] as const;
 type DataType = (typeof TYPES)[number];
 
 export async function POST(req: Request) {
@@ -24,6 +25,7 @@ export async function POST(req: Request) {
   // 1) Validasi sesuai tipe.
   const report = type === 'sourcing' ? validateSourcing(buf)
     : (type === 'bso' || type === 'apm') ? validateBsoApm(buf)
+    : type === 'fulfillment' ? validateFulfillment(buf)
     : validateExcel(buf);
   if (!report.ok) {
     return NextResponse.json(
@@ -42,6 +44,11 @@ export async function POST(req: Request) {
       data = { peopleSearch: s.peopleSearch, centralSourcing: s.centralSourcing, psKpiDefs: s.psKpiDefs, csmKpiDefs: s.csmKpiDefs };
       rowsCount = s.peopleSearch.length + s.centralSourcing.length;
       detectedPeriod = s.period;
+    } else if (type === 'fulfillment') {
+      const s = parseFulfillment(buf);
+      data = s;
+      rowsCount = s.regions.reduce((n, r) => n + r.rows.length, 0);
+      detectedPeriod = s.info.periode;
     } else if (type === 'bso' || type === 'apm') {
       const s = parseBsoApm(buf);
       data = { people: s.people, kpiDefs: s.kpiDefs };

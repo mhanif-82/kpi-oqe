@@ -21,6 +21,12 @@ function peopleCount(d: unknown) {
   if (d && typeof d === 'object' && Array.isArray((d as { people?: unknown[] }).people)) return (d as { people: unknown[] }).people.length;
   return 0;
 }
+function fulfillmentCount(d: unknown) {
+  if (d && typeof d === 'object' && Array.isArray((d as { regions?: { rows?: unknown[] }[] }).regions)) {
+    return (d as { regions: { rows?: unknown[] }[] }).regions.reduce((n, r) => n + (r.rows?.length ?? 0), 0);
+  }
+  return 0;
+}
 
 export default async function AdminPage() {
   const sb = await createClient();
@@ -37,7 +43,7 @@ export default async function AdminPage() {
       .maybeSingle();
     return data as Snap;
   };
-  const [rm, sourcing, bso, apm] = await Promise.all([latest('rm'), latest('sourcing'), latest('bso'), latest('apm')]);
+  const [rm, sourcing, bso, apm, fulfillment] = await Promise.all([latest('rm'), latest('sourcing'), latest('bso'), latest('apm'), latest('fulfillment')]);
 
   return (
     <main className="min-h-screen bg-[#0a0a0a] text-zinc-100"
@@ -67,11 +73,12 @@ export default async function AdminPage() {
           <StatusCard title="🔎 Sourcing" tone="sky" snap={sourcing} count={sourcing ? `${sourcingCount(sourcing.data)} orang` : null} />
           <StatusCard title="🏢 BSO" tone="emerald" snap={bso} count={bso ? `${peopleCount(bso.data)} BSO` : null} />
           <StatusCard title="🎖️ APM" tone="violet" snap={apm} count={apm ? `${peopleCount(apm.data)} APM` : null} />
+          <StatusCard title="📋 Fulfillment (SO & Usulan)" tone="rose" snap={fulfillment} count={fulfillment ? `${fulfillmentCount(fulfillment.data)} baris` : null} />
         </section>
 
         <section className="mb-6">
           <h2 className="text-sm font-bold tracking-wider text-zinc-400 uppercase mb-3">Upload data baru</h2>
-          <UploadForm hasRm={!!rm} hasSourcing={!!sourcing} hasBso={!!bso} hasApm={!!apm} />
+          <UploadForm hasRm={!!rm} hasSourcing={!!sourcing} hasBso={!!bso} hasApm={!!apm} hasFulfillment={!!fulfillment} />
         </section>
 
         <section className="mb-2">
@@ -83,8 +90,8 @@ export default async function AdminPage() {
   );
 }
 
-function StatusCard({ title, tone, snap, count }: { title: string; tone: 'amber' | 'sky' | 'emerald' | 'violet'; snap: Snap; count: string | null }) {
-  const ring = tone === 'amber' ? 'border-amber-900/50' : tone === 'sky' ? 'border-sky-900/50' : tone === 'emerald' ? 'border-emerald-900/50' : 'border-violet-900/50';
+function StatusCard({ title, tone, snap, count }: { title: string; tone: 'amber' | 'sky' | 'emerald' | 'violet' | 'rose'; snap: Snap; count: string | null }) {
+  const ring = tone === 'amber' ? 'border-amber-900/50' : tone === 'sky' ? 'border-sky-900/50' : tone === 'emerald' ? 'border-emerald-900/50' : tone === 'rose' ? 'border-rose-900/50' : 'border-violet-900/50';
   return (
     <div className={`bg-zinc-900/60 border ${ring} rounded-2xl p-4`}>
       <div className="flex items-center gap-2 mb-2">

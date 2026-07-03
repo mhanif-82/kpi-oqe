@@ -30,10 +30,11 @@ Tabel `kpi_snapshots`: `id, type, period, file_name, uploaded_at, uploaded_by, d
 
 | Tipe | URL | Sumber Excel | Dashboard |
 |---|---|---|---|
-| **RM** | `/` | 1 sheet: NO · EMPLOYEE NAME · AOM · REGIONAL · (KPI + BOBOT)… · PENCAPAIAN | Top 5 Best · Coaching · Regional Battle · Leaderboard |
+| **RM** | `/` | 1 sheet: NO · EMPLOYEE NAME · AOM · REGIONAL · (KPI + BOBOT)… · PENCAPAIAN | Top 5 Best · Coaching · Regional Battle · Leaderboard · [SO Reg 1–3 jika Fulfillment terupload] |
 | **Sourcing** | `/ps` | 2 sheet/tabel: People Search + Central Sourcing Manager (NAMA · [POSISI · CENTRAL] · KPI[ACTUAL/BOBOT/TARGET/ACH]… · TOTAL ACHIEVEMENT) | Top 5 Best PS · Worst PS · Best Central Sourcing Mgr · Leaderboard PS |
 | **BSO** | `/bs` | 1 sheet: EMPLOYEE NAME · APM · REGIONAL · KPI[ACHIEVEMENT/ACH X BOBOT]… · PERFORMANCE | Top 3 Best BSO · Worst BSO · Best APM · Leaderboard BSO |
 | **APM** | `/bs` | sheet sama dgn BSO **+ tabel kedua "RANK"** (APM · REGIONAL · RANK per-KPI 1/2/3 · TOTAL RANK 1) | Tampil di halaman "Best APM" pada `/bs` |
+| **Fulfillment** | `/` (slide 5–7, setelah Leaderboard) | 3 sheet **REG 1/2/3**; tiap sheet: blok info (Nama Report · Periode · Tgl Release · Cut Off Closing · REGIONAL HEAD) + header 2 baris (REGION · AOM · RM · NAMA KLIEN · RECRUITMENT ORDER · FULFILL · UNFULFILL · % FULFILL · CLOSE · % CLOSE · FULFILL[ON/OVER SLA] · UNFULFILL[ON/OVER SLA] · STATUS SLA[ON/OVER/CLOSE] · % PERFORM SLA); baris "… Total" diabaikan | Slide **"Report SO & Usulan — Regional N"** per sheet |
 
 Parser otomatis: deteksi sheet/tabel (judul/nama sheet), jumlah KPI bebas, format persen `100.00%`/`95%`/`95,13%` semua terbaca, baris kosong/duplikat/grand-total diabaikan.
 
@@ -59,13 +60,20 @@ Halaman pintasan TV-friendly: kartu besar klik-able ke tiap dashboard (RM `/`, S
 - **Leaderboard:** baris 100% tampil ⭐ tanpa #rank/medali; yang <100% dapat nomor `#N` di bawahnya. Kalau **semua** 100% → urut nama A–Z, semua ⭐, banner *"🏆 Perfect Performance (100%)"*.
 - **Best/Podium page:** kalau **≥2 orang** 100% → jadi list *"Best Performance"* (semua nama 100%, tanpa juara). Kalau hanya 1 orang 100% → tetap jadi champion. Nama dibuat besar untuk TV.
 
-### 6.3 Ranking APM = TOTAL RANK 1
+### 6.3 Slide Report SO & Usulan (Fulfillment)
+- Upload tipe **Fulfillment** menambah slide SO Reg 1–3 di dashboard RM (`/`) **setelah Leaderboard**, satu per sheet REG; tanpa upload, dashboard tetap 4 slide seperti semula.
+- Judul header berubah jadi **"📋 Report SO & Usulan — Regional N"** + badge Regional Head; kartu stats diganti info **Periode · Tgl Release · Cut Off Closing** (dibaca dari blok info sheet).
+- Isi: tabel penuh (semua kolom sheet), **digrup per RM** dan diurut **% PERFORM SLA terjelek → terbagus** (baris grup = agregat RM: % PERFORM SLA = Σ ON SLA / Σ(ON+OVER)); baris klien di dalam grup ikut diurut terjelek dulu.
+- Warna % PERFORM SLA: ≥90% hijau · ≥70% amber · <70% merah (gradient inline rgba, TV-safe).
+- Slide auto-scroll seperti leaderboard lalu lanjut sendiri; kalau muat tanpa scroll, pakai durasi slide biasa.
+
+### 6.4 Ranking APM = TOTAL RANK 1
 - APM **tidak** diranking dari total/achievement, tapi dari **jumlah peringkat #1** terbanyak di seluruh KPI (kolom TOTAL RANK 1 di tabel RANK file APM).
 - Tie-break: performance.
 - Tampil: *"N× Rank #1"* + daftar KPI tempat dia #1 (mis. "🥇 Rank #1 di: SPKP, Kontrak, Training Induction").
 
 ## 7. Admin (`/admin`, perlu login)
-- Pemilih tipe: **🏆 RM · 🔎 Sourcing · 🏢 BSO · 🎖️ APM**.
+- Pemilih tipe: **🏆 RM · 🔎 Sourcing · 🏢 BSO · 🎖️ APM · 📋 Fulfillment**.
 - Pilih **bulan (closing) & tahun**.
 - **Download template contoh** per tipe (mirror format asli).
 - **Validasi sebelum simpan**: kumpulkan semua error/peringatan (bukan berhenti di error pertama), dengan **nomor baris & kolom**; bisa **download log .txt**. File salah → ditolak, data lama aman.

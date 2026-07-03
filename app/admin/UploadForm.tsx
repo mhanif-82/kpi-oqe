@@ -6,24 +6,27 @@ const MONTHS = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustu
 
 type Issue = { severity: 'error' | 'warning'; row: number | null; column: string | null; message: string };
 type Report = { ok: boolean; fatal: string | null; issues: Issue[]; rowsParsed: number; sheetName: string | null; kpiCount: number };
-type DataType = 'rm' | 'sourcing' | 'bso' | 'apm';
+type DataType = 'rm' | 'sourcing' | 'bso' | 'apm' | 'fulfillment';
 
 const TYPE_META: Record<DataType, { label: string; icon: string; desc: string; template: string; hint: string; accent: string }> = {
   rm:       { label: 'RM',       icon: '🏆', desc: 'Relationship Manager — dashboard /',                     template: '/Template_RM_Contoh.xlsx',       hint: 'Kolom: NO · EMPLOYEE NAME · AOM · REGIONAL · (KPI + BOBOT)… · PENCAPAIAN', accent: 'amber' },
   sourcing: { label: 'Sourcing', icon: '🔎', desc: 'People Search + Central Sourcing Mgr — dashboard /ps',   template: '/Template_Sourcing_Contoh.xlsx', hint: 'Tiap tabel: NAMA · (KPI: ACTUAL/BOBOT/TARGET/ACH)… · TOTAL ACHIEVEMENT (2 sheet: CSM & ALL PEOPLE SEARCH).', accent: 'sky' },
   bso:      { label: 'BSO',      icon: '🏢', desc: 'BSO — dashboard /bs',                                    template: '/Template_BSO_Contoh.xlsx',      hint: 'Kolom: EMPLOYEE NAME · APM · REGIONAL · (KPI: ACHIEVEMENT/ACH X BOBOT)… · PERFORMANCE.', accent: 'emerald' },
   apm:      { label: 'APM',      icon: '🎖️', desc: 'APM — tampil di dashboard /bs',                          template: '/Template_APM_Contoh.xlsx',      hint: 'Kolom: EMPLOYEE NAME · REGIONAL · (KPI: ACHIEVEMENT/ACH X BOBOT)… · PERFORMANCE.', accent: 'violet' },
+  fulfillment: { label: 'Fulfillment', icon: '📋', desc: 'Report SO & Usulan by Regional — slide di dashboard /', template: '/Template_Fulfillment_Contoh.xlsx', hint: 'Sheet REG 1/2/3 — kolom: REGION · AOM · RM · NAMA KLIEN · RECRUITMENT ORDER · FULFILL/UNFULFILL · % FULFILL · CLOSE · SLA (ON/OVER) · % PERFORM SLA + info Periode/Tgl Release/Cut Off.', accent: 'rose' },
 };
 const ACCENT_SEL: Record<string, string> = {
   amber: 'border-amber-400/60 bg-amber-400/10', sky: 'border-sky-400/60 bg-sky-400/10',
   emerald: 'border-emerald-400/60 bg-emerald-400/10', violet: 'border-violet-400/60 bg-violet-400/10',
+  rose: 'border-rose-400/60 bg-rose-400/10',
 };
 const ACCENT_BADGE: Record<string, string> = {
   amber: 'bg-amber-400 text-amber-950', sky: 'bg-sky-400 text-sky-950',
   emerald: 'bg-emerald-400 text-emerald-950', violet: 'bg-violet-400 text-violet-950',
+  rose: 'bg-rose-400 text-rose-950',
 };
 
-export default function UploadForm({ hasRm, hasSourcing, hasBso, hasApm }: { hasRm?: boolean; hasSourcing?: boolean; hasBso?: boolean; hasApm?: boolean }) {
+export default function UploadForm({ hasRm, hasSourcing, hasBso, hasApm, hasFulfillment }: { hasRm?: boolean; hasSourcing?: boolean; hasBso?: boolean; hasApm?: boolean; hasFulfillment?: boolean }) {
   const router = useRouter();
   const now = new Date();
   const [type, setType] = useState<DataType>('rm');
@@ -37,7 +40,7 @@ export default function UploadForm({ hasRm, hasSourcing, hasBso, hasApm }: { has
   const [month, setMonth] = useState(now.getMonth());
   const [year, setYear] = useState(now.getFullYear());
 
-  const existMap: Record<DataType, boolean | undefined> = { rm: hasRm, sourcing: hasSourcing, bso: hasBso, apm: hasApm };
+  const existMap: Record<DataType, boolean | undefined> = { rm: hasRm, sourcing: hasSourcing, bso: hasBso, apm: hasApm, fulfillment: hasFulfillment };
   const hasExisting = existMap[type];
   const typeLabel = TYPE_META[type].label;
   const periodLabel = type === 'rm' ? 'Periode' : 'Bulan Closing';
@@ -128,7 +131,7 @@ export default function UploadForm({ hasRm, hasSourcing, hasBso, hasApm }: { has
   return (
     <form onSubmit={submit}>
       {/* Pemilih tipe */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">
         {(Object.keys(TYPE_META) as DataType[]).map(t => {
           const m = TYPE_META[t];
           const sel = type === t;

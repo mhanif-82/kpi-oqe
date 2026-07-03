@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import Dashboard from './Dashboard';
 import type { KpiRow } from '@/lib/parse-kpi';
+import type { FulfillmentData } from '@/lib/parse-fulfillment';
 
 export const revalidate = 30;
 
@@ -8,13 +9,15 @@ type Payload = { rows: KpiRow[]; kpiDefs: { name: string; weight: number }[] };
 
 export default async function Home() {
   const sb = await createClient();
-  const { data } = await sb
+  const latest = (type: string) => sb
     .from('kpi_snapshots')
     .select('period, uploaded_at, file_name, data')
-    .eq('type', 'rm')
+    .eq('type', type)
     .order('uploaded_at', { ascending: false })
     .limit(1)
     .maybeSingle();
+
+  const [{ data }, { data: ful }] = await Promise.all([latest('rm'), latest('fulfillment')]);
 
   if (!data) {
     return (
@@ -31,7 +34,13 @@ export default async function Home() {
     ? { rows: data.data as KpiRow[], kpiDefs: inferDefs(data.data as KpiRow[]) }
     : (data.data as Payload);
 
-  return <Dashboard rows={payload.rows} kpiDefs={payload.kpiDefs} period={data.period} fileName={data.file_name} uploadedAt={data.uploaded_at} />;
+  return (
+    <Dashboard
+      rows={payload.rows} kpiDefs={payload.kpiDefs} period={data.period}
+      fileName={data.file_name} uploadedAt={data.uploaded_at}
+      fulfillment={(ful?.data as FulfillmentData) ?? null}
+    />
+  );
 }
 
 function inferDefs(rows: KpiRow[]): { name: string; weight: number }[] {
