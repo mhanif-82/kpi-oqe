@@ -2,20 +2,20 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { KpiRow } from '@/lib/parse-kpi';
 import type { FulfillmentData, FulfillRegion, FulfillRow, FulfillmentInfo } from '@/lib/parse-fulfillment';
+import { Avatar, PhotosProvider } from './Avatar';
 
 const DEFAULT_TRANSITION_MS = 15000;
 const DEFAULT_SCROLL_SPEED  = 40; // px/sec
 
 const pct = (v: number) => (v * 100).toFixed(2) + '%';
-const initials = (n: string) => n.split(/\s+/).filter(Boolean).slice(0, 2).map(s => s[0]).join('').toUpperCase();
 
 const DEFAULT_COACHING_THRESHOLD = 97; // persen
 type KpiDef = { name: string; weight: number };
 type Settings = { transitionMs: number; scrollSpeed: number; coachingThreshold?: number };
 
-export default function Dashboard({ rows, period, uploadedAt, fulfillment }: {
+export default function Dashboard({ rows, period, uploadedAt, fulfillment, photos }: {
   rows: KpiRow[]; kpiDefs: KpiDef[]; period: string | null; fileName?: string | null; uploadedAt?: string | null;
-  fulfillment?: FulfillmentData | null;
+  fulfillment?: FulfillmentData | null; photos?: Record<string, string>;
 }) {
   const regs = useMemo(() => (fulfillment?.regions ?? []).filter(r => r.rows.length), [fulfillment]);
   const pageCount = 4 + regs.length; // 0-2 KPI · 3..(2+n) Report SO & Usulan per regional · terakhir leaderboard
@@ -122,6 +122,7 @@ export default function Dashboard({ rows, period, uploadedAt, fulfillment }: {
   };
 
   return (
+    <PhotosProvider value={photos ?? {}}>
     <div className="h-screen bg-[#0a0a0a] text-zinc-100 p-6 md:p-8 flex flex-col gap-6 overflow-hidden">
       <style>{`
         @keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
@@ -151,6 +152,7 @@ export default function Dashboard({ rows, period, uploadedAt, fulfillment }: {
         )}
       </div>
     </div>
+    </PhotosProvider>
   );
 }
 
@@ -265,7 +267,7 @@ function BestPerfectList({ names }: { names: { name: string; sub?: string }[] })
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
           {names.map(n => (
             <div key={n.name} className="rounded-xl border p-4 flex items-center gap-4" style={{ background: 'linear-gradient(135deg, rgba(245,158,11,0.18), rgba(120,53,15,0.30))', borderColor: 'rgba(251,191,36,0.4)' }}>
-              <div className="w-20 h-20 text-2xl rounded-full flex items-center justify-center font-black text-white shrink-0" style={{ background: 'linear-gradient(135deg,#fcd34d,#f59e0b,#b45309)' }}>{initials(n.name)}</div>
+              <Avatar name={n.name} className="w-20 h-20 text-2xl rounded-full flex items-center justify-center font-black text-white shrink-0" style={{ background: 'linear-gradient(135deg,#fcd34d,#f59e0b,#b45309)' }} />
               <div className="min-w-0 flex-1">
                 <div className="font-bold text-2xl md:text-3xl leading-tight">{n.name}</div>
                 {n.sub && <div className="text-base md:text-lg text-zinc-400 truncate">{n.sub}</div>}
@@ -362,10 +364,9 @@ function PodiumCard({ rank, row, regionLabel }: { rank: 1 | 2 | 3; row: KpiRow; 
          style={{ background: s.cardBg, boxShadow: s.glow, borderColor: s.border }}>
       <div className={`absolute -top-5 left-1/2 -translate-x-1/2 ${big ? 'text-5xl' : 'text-4xl'}`}>{s.icon}</div>
       <div className="text-sm md:text-base font-bold tracking-[0.18em] mt-3" style={{ color: s.text }}>{s.label}</div>
-      <div className={`${big ? 'w-24 h-24 text-3xl' : 'w-20 h-20 text-2xl'} rounded-full flex items-center justify-center font-black text-white shadow`}
-           style={{ background: s.avatarBg }}>
-        {initials(row.name)}
-      </div>
+      <Avatar name={row.name}
+        className={`${big ? 'w-24 h-24 text-3xl' : 'w-20 h-20 text-2xl'} rounded-full flex items-center justify-center font-black text-white shadow`}
+        style={{ background: s.avatarBg }} />
       <div className={`font-bold ${big ? 'text-xl md:text-2xl' : 'text-lg md:text-xl'} leading-tight`}>{row.name}</div>
       <div className="text-sm md:text-base text-zinc-400">{regionLabel(row.regional)}</div>
       <div className={`${big ? 'text-4xl md:text-5xl' : 'text-3xl md:text-4xl'} font-black`} style={{ color: s.text }}>{pct(row.pencapaian)}</div>
@@ -383,7 +384,7 @@ function MinorCard({ rank, row, regionLabel }: { rank: number; row: KpiRow; regi
   return (
     <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-3.5 flex items-center gap-4">
       <div className="text-sm font-bold text-zinc-500 w-10 text-center leading-tight">#<span className="text-2xl text-zinc-200">{rank}</span></div>
-      <div className="w-14 h-14 rounded-full bg-zinc-700 flex items-center justify-center text-lg font-bold text-white shrink-0">{initials(row.name)}</div>
+      <Avatar name={row.name} className="w-14 h-14 rounded-full bg-zinc-700 flex items-center justify-center text-lg font-bold text-white shrink-0" />
       <div className="flex-1 min-w-0">
         <div className="font-bold text-lg md:text-xl truncate">{row.name}</div>
         <div className="text-sm md:text-base text-zinc-500 truncate">{regionLabel(row.regional)}</div>
@@ -781,6 +782,7 @@ function FragmentRows({ g, gi, slaCls, groupTint, td }: {
         <td className="p-3.5" colSpan={7}>
           <div className="flex items-center gap-3 flex-wrap">
             <span className="text-base font-black text-zinc-500">#{gi + 1}</span>
+            <Avatar name={g.rm} className="w-12 h-12 rounded-full bg-zinc-700 flex items-center justify-center text-base font-bold text-white shrink-0" />
             <span className="font-black text-2xl md:text-3xl">{g.rm}</span>
             <span className="text-base text-zinc-400">AOM: {g.aom || '-'}</span>
             <span className="text-base text-zinc-500">RO {g.ro} · Fulfill {g.fulfill} · Unfulfill {g.unfulfill}</span>

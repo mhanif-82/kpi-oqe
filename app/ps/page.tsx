@@ -12,13 +12,16 @@ type Payload = {
 
 export default async function PsPage() {
   const sb = await createClient();
-  const { data } = await sb
-    .from('kpi_snapshots')
-    .select('period, uploaded_at, data')
-    .eq('type', 'sourcing')
-    .order('uploaded_at', { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  const [{ data }, { data: ph }] = await Promise.all([
+    sb.from('kpi_snapshots')
+      .select('period, uploaded_at, data')
+      .eq('type', 'sourcing')
+      .order('uploaded_at', { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    sb.from('person_photos').select('name, image'),
+  ]);
+  const photos = Object.fromEntries((ph ?? []).map(p => [p.name, p.image]));
 
   if (!data) {
     return (
@@ -37,6 +40,7 @@ export default async function PsPage() {
       centralSourcing={payload.centralSourcing ?? []}
       period={data.period}
       uploadedAt={data.uploaded_at}
+      photos={photos}
     />
   );
 }

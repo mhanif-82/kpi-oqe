@@ -72,6 +72,11 @@ Halaman pintasan TV-friendly: kartu besar klik-able ke tiap dashboard (RM `/`, S
 - Tie-break: performance.
 - Tampil: *"N× Rank #1"* + daftar KPI tempat dia #1 (mis. "🥇 Rank #1 di: SPKP, Kontrak, Training Induction").
 
+### 6.5 Foto profil (`person_photos`)
+- Tabel `person_photos` (key = nama lowercase, image = data-URL JPEG ±256px — tanpa Storage bucket).
+- Admin kelola di **`/admin/photos`**: daftar semua orang dari snapshot terbaru tiap tipe (RM+Fulfillment, PS, CSM, BSO, APM), search, upload (auto-crop persegi & kompres di browser), ganti, hapus.
+- Semua dashboard pakai `<Avatar>` (app/Avatar.tsx + PhotosProvider): foto kalau ada, fallback inisial. Termasuk baris grup RM di slide SO & Usulan.
+
 ## 7. Admin (`/admin`, perlu login)
 - Pemilih tipe: **🏆 RM · 🔎 Sourcing · 🏢 BSO · 🎖️ APM · 📋 Fulfillment**.
 - Pilih **bulan (closing) & tahun**.

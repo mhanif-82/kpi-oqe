@@ -36,3 +36,29 @@ create policy "authed insert kpi_snapshots" on kpi_snapshots
 drop policy if exists "authed delete kpi_snapshots" on kpi_snapshots;
 create policy "authed delete kpi_snapshots" on kpi_snapshots
   for delete to authenticated using (true);
+
+-- ── Foto profil per orang (dipakai semua dashboard; upload dari /admin/photos) ──
+-- Key = nama lowercase; image = data-URL JPEG kecil (±256px).
+create table if not exists person_photos (
+  name text primary key,
+  image text not null,
+  updated_at timestamptz not null default now()
+);
+
+alter table person_photos enable row level security;
+
+drop policy if exists "public read person_photos" on person_photos;
+create policy "public read person_photos" on person_photos
+  for select using (true);
+
+drop policy if exists "authed insert person_photos" on person_photos;
+create policy "authed insert person_photos" on person_photos
+  for insert to authenticated with check (true);
+
+drop policy if exists "authed update person_photos" on person_photos;
+create policy "authed update person_photos" on person_photos
+  for update to authenticated using (true);
+
+drop policy if exists "authed delete person_photos" on person_photos;
+create policy "authed delete person_photos" on person_photos
+  for delete to authenticated using (true);

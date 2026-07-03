@@ -1,18 +1,19 @@
 'use client';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Avatar, PhotosProvider } from '../Avatar';
 
 const DEFAULT_TRANSITION_MS = 15000;
 const DEFAULT_SCROLL_SPEED = 40;
 const pct = (v: number) => (v * 100).toFixed(2) + '%';
-const initials = (n: string) => n.split(/\s+/).filter(Boolean).slice(0, 2).map(s => s[0]).join('').toUpperCase();
 
 const DEFAULT_COACHING_THRESHOLD = 97;
 export type SKpi = { name: string; actual: number; ach: number; weight: number };
 export type SPerson = { name: string; total: number; kpis: SKpi[]; unit?: string; posisi?: string };
 type Settings = { transitionMs: number; scrollSpeed: number; coachingThreshold?: number };
 
-export default function SourcingDashboard({ peopleSearch, centralSourcing, period, uploadedAt }: {
+export default function SourcingDashboard({ peopleSearch, centralSourcing, period, uploadedAt, photos }: {
   peopleSearch: SPerson[]; centralSourcing: SPerson[]; period: string | null; uploadedAt?: string | null;
+  photos?: Record<string, string>;
 }) {
   const [page, setPage] = useState(0);
   const [dir, setDir] = useState<'right' | 'left'>('right');
@@ -91,6 +92,7 @@ export default function SourcingDashboard({ peopleSearch, centralSourcing, perio
   const setPageManual = (p: number) => { setDir(p > page ? 'right' : 'left'); setPage(p); setAnimKey(k => k + 1); setPaused(true); };
 
   return (
+    <PhotosProvider value={photos ?? {}}>
     <div className="h-screen bg-[#0a0a0a] text-zinc-100 p-6 md:p-8 flex flex-col gap-6 overflow-hidden">
       <style>{`
         @keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
@@ -108,6 +110,7 @@ export default function SourcingDashboard({ peopleSearch, centralSourcing, perio
         {page === 3 && <PageLeaderboard ranked={psRanked} scrollSpeed={scrollSpeed} onScrollDone={onLeaderboardDone} allPerfect={psAllPerfect} />}
       </div>
     </div>
+    </PhotosProvider>
   );
 }
 
@@ -196,7 +199,7 @@ function PodiumCard({ rank, p }: { rank: 1 | 2 | 3; p: SPerson }) {
     <div className={`relative rounded-2xl border p-5 md:p-6 flex flex-col items-center text-center gap-2 ${s.height}`} style={{ background: s.cardBg, boxShadow: s.glow, borderColor: s.border }}>
       <div className={`absolute -top-5 left-1/2 -translate-x-1/2 ${big ? 'text-5xl' : 'text-4xl'}`}>{s.icon}</div>
       <div className="text-sm md:text-base font-bold tracking-[0.18em] mt-3" style={{ color: s.text }}>{s.label}</div>
-      <div className={`${big ? 'w-24 h-24 text-3xl' : 'w-20 h-20 text-2xl'} rounded-full flex items-center justify-center font-black text-white shadow`} style={{ background: s.avatarBg }}>{initials(p.name)}</div>
+      <Avatar name={p.name} className={`${big ? 'w-24 h-24 text-3xl' : 'w-20 h-20 text-2xl'} rounded-full flex items-center justify-center font-black text-white shadow`} style={{ background: s.avatarBg }} />
       <div className={`font-bold ${big ? 'text-2xl md:text-3xl' : 'text-xl md:text-2xl'} leading-tight`}>{p.name}</div>
       {p.unit && <div className="text-sm md:text-base text-zinc-400">{p.unit}</div>}
       <div className={`${big ? 'text-4xl md:text-5xl' : 'text-3xl md:text-4xl'} font-black`} style={{ color: s.text }}>{pct(p.total)}</div>
@@ -207,7 +210,7 @@ function MinorCard({ rank, p }: { rank: number; p: SPerson }) {
   return (
     <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-3.5 flex items-center gap-4">
       <div className="text-sm font-bold text-zinc-500 w-10 text-center">#<span className="text-2xl text-zinc-200">{rank}</span></div>
-      <div className="w-14 h-14 rounded-full bg-zinc-700 flex items-center justify-center text-lg font-bold text-white shrink-0">{initials(p.name)}</div>
+      <Avatar name={p.name} className="w-14 h-14 rounded-full bg-zinc-700 flex items-center justify-center text-lg font-bold text-white shrink-0" />
       <div className="flex-1 min-w-0">
         <div className="font-bold text-xl md:text-2xl truncate">{p.name}</div>
         {p.unit && <div className="text-sm text-zinc-500 truncate">{p.unit}</div>}
@@ -276,7 +279,7 @@ function BestPerfectList({ names }: { names: { name: string; sub?: string }[] })
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
           {names.map(n => (
             <div key={n.name} className="rounded-xl border p-4 flex items-center gap-4" style={{ background: 'linear-gradient(135deg, rgba(245,158,11,0.18), rgba(120,53,15,0.30))', borderColor: 'rgba(251,191,36,0.4)' }}>
-              <div className="w-20 h-20 text-2xl rounded-full flex items-center justify-center font-black text-white shrink-0" style={{ background: 'linear-gradient(135deg,#fcd34d,#f59e0b,#b45309)' }}>{initials(n.name)}</div>
+              <Avatar name={n.name} className="w-20 h-20 text-2xl rounded-full flex items-center justify-center font-black text-white shrink-0" style={{ background: 'linear-gradient(135deg,#fcd34d,#f59e0b,#b45309)' }} />
               <div className="min-w-0 flex-1">
                 <div className="font-bold text-2xl md:text-3xl leading-tight">{n.name}</div>
                 {n.sub && <div className="text-base md:text-lg text-zinc-400 truncate">{n.sub}</div>}
@@ -300,7 +303,7 @@ function PageCSM({ ranked }: { ranked: SPerson[] }) {
         {champ && (
           <div className="relative rounded-2xl border p-6 flex items-center gap-6 overflow-hidden" style={{ background: PODIUM[1].cardBg, boxShadow: PODIUM[1].glow, borderColor: PODIUM[1].border }}>
             <div className="absolute -top-6 -right-4 text-8xl opacity-10 select-none">🏆</div>
-            <div className="w-24 h-24 rounded-full flex items-center justify-center text-3xl font-black text-white shadow shrink-0" style={{ background: PODIUM[1].avatarBg }}>{initials(champ.name)}</div>
+            <Avatar name={champ.name} className="w-24 h-24 rounded-full flex items-center justify-center text-3xl font-black text-white shadow shrink-0" style={{ background: PODIUM[1].avatarBg }} />
             <div className="flex-1 min-w-0">
               <div className="text-sm font-black tracking-[0.2em]" style={{ color: PODIUM[1].text }}>🏆 CHAMPION</div>
               <div className="text-3xl md:text-4xl font-black leading-tight mt-1">{champ.name}</div>
@@ -312,7 +315,7 @@ function PageCSM({ ranked }: { ranked: SPerson[] }) {
           {rest.map((p, i) => (
             <div key={p.name} className="bg-zinc-900/60 border border-zinc-800 rounded-xl flex items-center gap-4 px-5 py-3.5">
               <div className="text-xl md:text-2xl font-black text-zinc-400 w-12 text-center">#{i + 2}</div>
-              <div className="w-12 h-12 rounded-full bg-zinc-700 flex items-center justify-center text-base font-bold text-white shrink-0">{initials(p.name)}</div>
+              <Avatar name={p.name} className="w-12 h-12 rounded-full bg-zinc-700 flex items-center justify-center text-base font-bold text-white shrink-0" />
               <div className="flex-1 min-w-0 font-bold text-xl md:text-2xl truncate">{p.name}</div>
               <div className="text-2xl md:text-3xl font-black text-zinc-200">{pct(p.total)}</div>
             </div>

@@ -17,7 +17,11 @@ export default async function BsPage() {
       .maybeSingle();
     return data;
   };
-  const [bsoSnap, apmSnap] = await Promise.all([latest('bso'), latest('apm')]);
+  const [bsoSnap, apmSnap, { data: ph }] = await Promise.all([
+    latest('bso'), latest('apm'),
+    sb.from('person_photos').select('name, image'),
+  ]);
+  const photos = Object.fromEntries((ph ?? []).map(p => [p.name, p.image]));
 
   if (!bsoSnap && !apmSnap) {
     return (
@@ -34,5 +38,5 @@ export default async function BsPage() {
   const period = bsoSnap?.period ?? apmSnap?.period ?? null;
   const uploadedAt = bsoSnap?.uploaded_at ?? apmSnap?.uploaded_at ?? null;
 
-  return <BsDashboard bso={bso} apm={apm} period={period} uploadedAt={uploadedAt} />;
+  return <BsDashboard bso={bso} apm={apm} period={period} uploadedAt={uploadedAt} photos={photos} />;
 }

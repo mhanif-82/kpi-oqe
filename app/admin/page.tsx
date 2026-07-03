@@ -58,6 +58,7 @@ export default async function AdminPage() {
           </div>
           <div className="flex items-center gap-2">
             <span className="text-xs text-zinc-500 hidden md:inline">{user.email}</span>
+            <a href="/admin/photos" className="text-xs bg-amber-400/10 text-amber-300 border border-amber-400/30 hover:bg-amber-400/20 px-3 py-1.5 rounded-md">📸 Foto</a>
             <a href="/" className="text-xs bg-zinc-900 border border-zinc-800 hover:border-amber-400/40 px-3 py-1.5 rounded-md">RM ↗</a>
             <a href="/ps" className="text-xs bg-zinc-900 border border-zinc-800 hover:border-sky-400/40 px-3 py-1.5 rounded-md">Sourcing ↗</a>
             <a href="/bs" className="text-xs bg-zinc-900 border border-zinc-800 hover:border-emerald-400/40 px-3 py-1.5 rounded-md">BSO ↗</a>

@@ -17,7 +17,11 @@ export default async function Home() {
     .limit(1)
     .maybeSingle();
 
-  const [{ data }, { data: ful }] = await Promise.all([latest('rm'), latest('fulfillment')]);
+  const [{ data }, { data: ful }, { data: ph }] = await Promise.all([
+    latest('rm'), latest('fulfillment'),
+    sb.from('person_photos').select('name, image'),
+  ]);
+  const photos = Object.fromEntries((ph ?? []).map(p => [p.name, p.image]));
 
   if (!data) {
     return (
@@ -39,6 +43,7 @@ export default async function Home() {
       rows={payload.rows} kpiDefs={payload.kpiDefs} period={data.period}
       fileName={data.file_name} uploadedAt={data.uploaded_at}
       fulfillment={(ful?.data as FulfillmentData) ?? null}
+      photos={photos}
     />
   );
 }
