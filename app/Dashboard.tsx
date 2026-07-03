@@ -146,7 +146,7 @@ export default function Dashboard({ rows, period, uploadedAt, fulfillment }: {
         {page === 2 && <PageRegional groups={regionGroups} />}
         {page === 3 && <PageLeaderboard sorted={sorted} regionLabel={regionLabel} scrollSpeed={settings.scrollSpeed} onScrollDone={onLeaderboardDone} allPerfect={allPerfect} threshold={threshold} />}
         {page >= 4 && page < 4 + regs.length && (
-          <PageRegReport key={page} idx={page - 4} region={regs[page - 4]}
+          <PageRegReport key={page} region={regs[page - 4]}
             scrollSpeed={settings.scrollSpeed} transitionMs={settings.transitionMs} onScrollDone={onLeaderboardDone} />
         )}
       </div>
@@ -175,6 +175,7 @@ function Header({ period, stats, page, setPage, paused, setPaused, uploadedAt, r
                   👤 {regHead}
                 </span>
               )}
+              <span className="text-sm md:text-base text-zinc-500 font-normal">urut % Perform SLA terendah</span>
             </h1>
           ) : (
             <h1 className="text-3xl md:text-4xl font-bold tracking-tight flex items-center gap-3 flex-wrap">
@@ -645,8 +646,8 @@ function PageLeaderboard({ sorted, regionLabel, scrollSpeed, onScrollDone, allPe
 
 /* ─── Report SO & Usulan per regional (dari upload Fulfillment) ───────── */
 /* Grup per RM, diurut dari % PERFORM SLA terjelek → terbagus; auto-scroll lalu lanjut slide. */
-function PageRegReport({ idx, region, scrollSpeed, transitionMs, onScrollDone }: {
-  idx: number; region: FulfillRegion; scrollSpeed: number; transitionMs: number; onScrollDone: () => void;
+function PageRegReport({ region, scrollSpeed, transitionMs, onScrollDone }: {
+  region: FulfillRegion; scrollSpeed: number; transitionMs: number; onScrollDone: () => void;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -717,20 +718,16 @@ function PageRegReport({ idx, region, scrollSpeed, transitionMs, onScrollDone }:
       ? { background: 'linear-gradient(90deg, rgba(245,158,11,0.14), rgba(245,158,11,0.02))', borderLeft: '4px solid #f59e0b' }
       : { background: 'linear-gradient(90deg, rgba(239,68,68,0.16), rgba(239,68,68,0.02))', borderLeft: '4px solid #ef4444' };
 
-  const th = 'p-2.5 text-center font-semibold';
-  const td = 'p-2.5 text-center text-base md:text-lg';
+  const th = 'p-3 text-center font-semibold';
+  const td = 'p-3 text-center text-lg md:text-xl';
 
   return (
     <section className="flex-1 flex flex-col min-h-0">
-      <h2 className="text-2xl md:text-3xl font-bold mb-4 flex items-center gap-3 flex-wrap">
-        📋 Report SO &amp; Usulan — Regional {idx + 1}
-        <span className="text-base text-zinc-500 font-normal">— urut % Perform SLA terendah</span>
-      </h2>
       <div ref={scrollRef} className="flex-1 overflow-auto rounded-xl border border-zinc-800" style={{ scrollBehavior: 'auto' }}>
         <table className="w-full">
-          <thead className="sticky top-0 bg-zinc-900 z-10 text-xs md:text-sm uppercase tracking-wider text-zinc-400">
+          <thead className="sticky top-0 bg-zinc-900 z-10 text-sm md:text-base uppercase tracking-wider text-zinc-400">
             <tr>
-              <th className="p-2.5 text-left" rowSpan={2}>Nama Klien</th>
+              <th className="p-3 text-left" rowSpan={2}>Nama Klien</th>
               <th className={th} rowSpan={2}>Recruitment<br />Order</th>
               <th className={th} rowSpan={2}>Fulfill</th>
               <th className={th} rowSpan={2}>Unfulfill</th>
@@ -781,12 +778,12 @@ function FragmentRows({ g, gi, slaCls, groupTint, td }: {
     <>
       {/* Baris grup: RM + agregat */}
       <tr className="border-t-2 border-zinc-700" style={groupTint(g.pctSla)}>
-        <td className="p-3" colSpan={7}>
+        <td className="p-3.5" colSpan={7}>
           <div className="flex items-center gap-3 flex-wrap">
-            <span className="text-sm font-black text-zinc-500">#{gi + 1}</span>
-            <span className="font-black text-xl md:text-2xl">{g.rm}</span>
-            <span className="text-sm text-zinc-400">AOM: {g.aom || '-'}</span>
-            <span className="text-sm text-zinc-500">RO {g.ro} · Fulfill {g.fulfill} · Unfulfill {g.unfulfill}</span>
+            <span className="text-base font-black text-zinc-500">#{gi + 1}</span>
+            <span className="font-black text-2xl md:text-3xl">{g.rm}</span>
+            <span className="text-base text-zinc-400">AOM: {g.aom || '-'}</span>
+            <span className="text-base text-zinc-500">RO {g.ro} · Fulfill {g.fulfill} · Unfulfill {g.unfulfill}</span>
           </div>
         </td>
         <td className={td}>{g.fOn}</td>
@@ -796,11 +793,11 @@ function FragmentRows({ g, gi, slaCls, groupTint, td }: {
         <td className={td}>{g.slaOn}</td>
         <td className={td}>{g.slaOver}</td>
         <td className={td}>{g.slaClose}</td>
-        <td className={`p-2.5 text-center font-black text-2xl md:text-3xl ${slaCls(g.pctSla)}`}>{(g.pctSla * 100).toFixed(0)}%</td>
+        <td className={`p-3 text-center font-black text-3xl md:text-4xl ${slaCls(g.pctSla)}`}>{(g.pctSla * 100).toFixed(0)}%</td>
       </tr>
       {g.rows.map(r => (
         <tr key={g.rm + r.klien} className="border-t border-zinc-800/60">
-          <td className="p-2.5 pl-10 text-left text-base md:text-lg text-zinc-300">{r.klien}</td>
+          <td className="p-3 pl-10 text-left text-lg md:text-xl text-zinc-300">{r.klien}</td>
           <td className={td}>{r.ro}</td>
           <td className={td}>{r.fulfill}</td>
           <td className={td}>{r.unfulfill}</td>
@@ -814,7 +811,7 @@ function FragmentRows({ g, gi, slaCls, groupTint, td }: {
           <td className={`${td} border-l border-zinc-800/60`}>{r.slaOn}</td>
           <td className={td}>{r.slaOver}</td>
           <td className={td}>{r.slaClose}</td>
-          <td className={`p-2.5 text-center font-bold text-lg md:text-xl border-l border-zinc-800/60 ${slaCls(r.pctSla)}`}>{(r.pctSla * 100).toFixed(0)}%</td>
+          <td className={`p-3 text-center font-bold text-xl md:text-2xl border-l border-zinc-800/60 ${slaCls(r.pctSla)}`}>{(r.pctSla * 100).toFixed(0)}%</td>
         </tr>
       ))}
     </>
