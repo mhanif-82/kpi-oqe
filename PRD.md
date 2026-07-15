@@ -77,12 +77,18 @@ Halaman pintasan TV-friendly: kartu besar klik-able ke tiap dashboard (RM `/`, S
 - Admin kelola di **`/admin/photos`**: daftar semua orang dari snapshot terbaru tiap tipe (RM+Fulfillment, PS, CSM, BSO, APM), search, upload (auto-crop persegi & kompres di browser), ganti, hapus.
 - Semua dashboard pakai `<Avatar>` (app/Avatar.tsx + PhotosProvider): foto kalau ada, fallback inisial. Termasuk baris grup RM di slide SO & Usulan.
 
+### 6.6 Riwayat upload (`/history-upload`, perlu login)
+- Tabel `upload_history`: log metadata tiap upload (tipe, file, periode, jumlah baris, uploader, waktu, `storage_path`) — data snapshot tetap replace-per-type, jadi DB tidak membengkak.
+- File mentah tiap upload disimpan ke **Supabase Storage** bucket privat `uploads` (path `{type}/{ts}_{nama}`), bisa **di-download** dari riwayat lewat `/api/history-download` (cek auth → signed URL 60 detik, attachment). Entri lama sebelum fitur ini tidak punya file (kolom File "—").
+- Halaman menampilkan semua entri (badge warna per tipe + ringkasan jumlah per tipe); link "🕘 History" di header admin.
+
 ## 7. Admin (`/admin`, perlu login)
 - Pemilih tipe: **🏆 RM · 🔎 Sourcing · 🏢 BSO · 🎖️ APM · 📋 Fulfillment**.
 - Pilih **bulan (closing) & tahun**.
 - **Download template contoh** per tipe (mirror format asli).
 - **Validasi sebelum simpan**: kumpulkan semua error/peringatan (bukan berhenti di error pertama), dengan **nomor baris & kolom**; bisa **download log .txt**. File salah → ditolak, data lama aman.
 - Status **semua dashboard** ditampilkan (LIVE, jumlah, periode, file, waktu upload).
+- Navigasi admin dikumpulkan di **dropdown menu (☰)** (`app/AdminMenu.tsx`), dipakai di `/admin`, `/admin/photos`, `/history-upload`: grup **Kelola Data** (Upload Data · Foto Profil · History Upload) + **Buka Dashboard** (RM · Sourcing · BSO & APM · Hub Link) + Sign out.
 - **Display Settings** (tersimpan di localStorage browser TV): durasi per slide, kecepatan scroll leaderboard, **coaching threshold**.
 
 ## 8. Komponen Halaman

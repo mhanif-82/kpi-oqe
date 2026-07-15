@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import PhotoManager, { type PersonGroup } from './PhotoManager';
+import AdminMenu from '../../AdminMenu';
 
 export default async function PhotosPage() {
   const sb = await createClient();
@@ -54,7 +55,7 @@ export default async function PhotosPage() {
             </h1>
             <p className="text-xs text-zinc-500 mt-1">Upload foto per orang — dipakai semua dashboard (fallback: inisial nama).</p>
           </div>
-          <a href="/admin" className="text-xs bg-zinc-900 border border-zinc-800 hover:border-amber-400/40 px-3 py-1.5 rounded-md">← Kembali ke Admin</a>
+          <AdminMenu email={user.email} current="/admin/photos" />
         </header>
         {groups.length
           ? <PhotoManager groups={groups} initialPhotos={photos} />

@@ -78,6 +78,27 @@ export async function POST(req: Request) {
   });
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
+  // Simpan file mentah ke Storage (untuk download di riwayat). Gagal simpan tidak menggagalkan upload.
+  let storagePath: string | null = null;
+  try {
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const path = `${type}/${Date.now()}_${safeName}`;
+    const { error: upErr } = await supabase.storage
+      .from('uploads')
+      .upload(path, buf, { contentType: file.type || 'application/octet-stream', upsert: false });
+    if (!upErr) storagePath = path;
+  } catch { /* abaikan: file live tetap tersimpan */ }
+
+  // Catat ke riwayat upload (log metadata; gagal nyatat tidak menggagalkan upload).
+  await supabase.from('upload_history').insert({
+    type,
+    period,
+    file_name: file.name,
+    rows: rowsCount,
+    uploaded_by: user.email,
+    storage_path: storagePath,
+  });
+
   const warnings = report.issues.filter(i => i.severity === 'warning');
   return NextResponse.json({ ok: true, type, rows: rowsCount, period, fileName: file.name, warnings });
 }

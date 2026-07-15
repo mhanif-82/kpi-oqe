@@ -62,3 +62,45 @@ create policy "authed update person_photos" on person_photos
 drop policy if exists "authed delete person_photos" on person_photos;
 create policy "authed delete person_photos" on person_photos
   for delete to authenticated using (true);
+
+-- ── Riwayat upload (log metadata tiap upload; data aslinya tetap replace-per-type) ──
+create table if not exists upload_history (
+  id uuid primary key default gen_random_uuid(),
+  type text not null,
+  period text,
+  file_name text,
+  rows integer,
+  uploaded_by text,
+  uploaded_at timestamptz not null default now()
+);
+
+alter table upload_history enable row level security;
+
+-- Berisi email pengupload → hanya untuk yang login.
+drop policy if exists "authed read upload_history" on upload_history;
+create policy "authed read upload_history" on upload_history
+  for select to authenticated using (true);
+
+drop policy if exists "authed insert upload_history" on upload_history;
+create policy "authed insert upload_history" on upload_history
+  for insert to authenticated with check (true);
+
+-- Seed awal: masukkan snapshot yang sekarang masih ada supaya history tidak kosong.
+insert into upload_history (type, period, file_name, uploaded_by, uploaded_at)
+select type, period, file_name, uploaded_by, uploaded_at from kpi_snapshots
+on conflict do nothing;
+
+-- ── Simpan file asli tiap upload (untuk download di /history-upload) ──
+alter table upload_history add column if not exists storage_path text;
+
+-- Bucket privat untuk file mentah.
+insert into storage.buckets (id, name, public) values ('uploads', 'uploads', false)
+on conflict (id) do nothing;
+
+drop policy if exists "authed read uploads" on storage.objects;
+create policy "authed read uploads" on storage.objects
+  for select to authenticated using (bucket_id = 'uploads');
+
+drop policy if exists "authed insert uploads" on storage.objects;
+create policy "authed insert uploads" on storage.objects
+  for insert to authenticated with check (bucket_id = 'uploads');

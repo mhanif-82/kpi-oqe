@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import UploadForm from './UploadForm';
 import DisplaySettings from './DisplaySettings';
+import AdminMenu from '../AdminMenu';
 
 type Snap = { period: string | null; file_name: string | null; uploaded_at: string; uploaded_by: string | null; data: unknown } | null;
 
@@ -56,16 +57,7 @@ export default async function AdminPage() {
             </h1>
             <p className="text-xs text-zinc-500 mt-1">Upload &amp; publish data KPI — RM · Sourcing · BSO · APM</p>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-zinc-500 hidden md:inline">{user.email}</span>
-            <a href="/admin/photos" className="text-xs bg-amber-400/10 text-amber-300 border border-amber-400/30 hover:bg-amber-400/20 px-3 py-1.5 rounded-md">📸 Foto</a>
-            <a href="/" className="text-xs bg-zinc-900 border border-zinc-800 hover:border-amber-400/40 px-3 py-1.5 rounded-md">RM ↗</a>
-            <a href="/ps" className="text-xs bg-zinc-900 border border-zinc-800 hover:border-sky-400/40 px-3 py-1.5 rounded-md">Sourcing ↗</a>
-            <a href="/bs" className="text-xs bg-zinc-900 border border-zinc-800 hover:border-emerald-400/40 px-3 py-1.5 rounded-md">BSO ↗</a>
-            <form action="/api/logout" method="post">
-              <button className="text-xs bg-red-500/10 text-red-300 border border-red-500/20 hover:bg-red-500/20 px-3 py-1.5 rounded-md">Sign out</button>
-            </form>
-          </div>
+          <AdminMenu email={user.email} current="/admin" />
         </header>
 
         {/* Status semua dashboard */}
