@@ -229,10 +229,10 @@ function StatCard({ label, value, sub, tone, small }: { label: string; value: st
   const labelCls = tone === 'good' ? 'text-emerald-400' : tone === 'warn' ? 'text-amber-400' : 'text-zinc-400';
   return (
     <div className={`rounded-xl border p-4 ${cls}`}>
-      <div className={`text-xs font-medium ${labelCls}`}>{label}</div>
-      <div className={`${small ? 'text-lg md:text-xl' : 'text-2xl md:text-3xl'} font-bold mt-2 flex items-baseline gap-2`}>
+      <div className={`text-sm md:text-base font-semibold ${labelCls}`}>{label}</div>
+      <div className={`${small ? 'text-2xl md:text-3xl' : 'text-3xl md:text-4xl'} font-bold mt-2 flex items-baseline gap-2`}>
         {value}
-        {sub && <span className="text-sm font-normal text-zinc-500">{sub}</span>}
+        {sub && <span className="text-base font-normal text-zinc-500">{sub}</span>}
       </div>
     </div>
   );
